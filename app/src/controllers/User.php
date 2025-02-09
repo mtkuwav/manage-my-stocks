@@ -17,13 +17,6 @@ class User extends Controller {
     parent::__construct($param);
   }
 
-  #[Route("POST", "/users")]
-  public function addUser() {
-    $this->user->add($this->body);
-
-    return $this->user->getLast();
-  }
-
   #[Route("DELETE", "/users/:id")]
   public function deleteUser() {
     return $this->user->delete(intval($this->params['id']));

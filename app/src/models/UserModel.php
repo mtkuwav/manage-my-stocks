@@ -9,15 +9,6 @@ class UserModel extends SqlConnect {
   private $table = "users";
   public $authorized_fields_to_update = ['username', 'email', 'role'];
 
-  public function add(array $data) {
-    $query = "
-      INSERT INTO $this->table (username, email, role)
-      VALUES (:username, :email, :role)
-    ";
-
-    $req = $this->db->prepare($query);
-    $req->execute($data);
-  }
 
   public function delete(int $id) {
     $req = $this->db->prepare("DELETE FROM $this->table WHERE id = :id");
