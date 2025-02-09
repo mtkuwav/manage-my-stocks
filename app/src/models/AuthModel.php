@@ -25,9 +25,10 @@ class AuthModel extends SqlConnect {
     $hashedPassword = password_hash($saltedPassword, PASSWORD_BCRYPT);
 
     // Create the user
-    $query_add = "INSERT INTO $this->table (email, password_hash) VALUES (:email, :password_hash)";
+    $query_add = "INSERT INTO $this->table (username, email, password_hash) VALUES (:username, :email, :password_hash)";
     $req2 = $this->db->prepare($query_add);
     $req2->execute([
+      "username" => $data["username"],
       "email" => $data["email"],
       "password_hash" => $hashedPassword
     ]);

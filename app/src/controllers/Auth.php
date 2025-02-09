@@ -19,7 +19,7 @@ class Auth extends Controller {
   public function register() {
       try {
           $data = $this->body;
-          if (empty($data['email']) || empty($data['password'])) {
+          if (empty($data['email']) || empty($data['password']) || empty($data['username'])) {
               throw new HttpException("Missing email or password.", 400);
           }
           $user = $this->auth->register($data);

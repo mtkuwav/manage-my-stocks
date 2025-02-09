@@ -3,3 +3,4 @@ database
 .DS_Store
 vendor
 composer.lock
+.users.txt
