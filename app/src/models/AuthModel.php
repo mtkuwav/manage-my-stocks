@@ -52,7 +52,7 @@ class AuthModel extends SqlConnect {
         // Combine input password with salt and verify
         $saltedPassword = $password . $this->passwordSalt;
         
-        if (password_verify($saltedPassword, $user['password'])) {
+        if (password_verify($saltedPassword, $user['password_hash'])) {
             $token = $this->generateJWT($user['id']);
             return ['token' => $token];
         }
