@@ -4,6 +4,7 @@ namespace App;
 
 use App\Utils\Route;
 use App\Utils\JWT;
+use App\Middlewares\AuthMiddleware;
 
 class Router {
     protected array $routes = [];

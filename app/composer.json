@@ -9,7 +9,8 @@
       "App\\": "src/",
       "App\\Controllers\\": "src/controllers/",
       "App\\Models\\": "src/models/",
-      "App\\Utils\\": "src/utils/"
+      "App\\Utils\\": "src/utils/",
+      "App\\Middlewares\\": "src/middlewares"
     }
   }
 }
