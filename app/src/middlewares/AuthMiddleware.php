@@ -11,6 +11,7 @@ class AuthMiddleware {
         // Check if the Authorization header is set
         if (!isset($headers['Authorization'])) {
             // Return an appropriate response or throw an exception
+            error_log("Authorization header not set");
             return $this->unauthorizedResponse();
         }
 
@@ -18,6 +19,7 @@ class AuthMiddleware {
 
         // Check if the Authorization header contains a bearer token
         if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            error_log("Bearer token not found in Authorization header");
             return $this->unauthorizedResponse();
         }
 
@@ -25,6 +27,7 @@ class AuthMiddleware {
 
         // Verify the JWT and return the result
         if (!JWT::verify($jwt)) {
+            error_log("JWT verification failed");
             return $this->unauthorizedResponse();
         }
 
