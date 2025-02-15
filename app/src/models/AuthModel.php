@@ -54,7 +54,7 @@ class AuthModel extends SqlConnect {
         $saltedPassword = $password . $this->passwordSalt;
         
         if (password_verify($saltedPassword, $user['password_hash'])) {
-            $token = $this->generateJWT($user['id']);
+            $token = $this->generateJWT($user['role']);
             return ['token' => $token];
         }
     }
@@ -62,9 +62,9 @@ class AuthModel extends SqlConnect {
     throw new \Exception("Invalid credentials.");
   }
 
-  private function generateJWT(string $userId) {
+  private function generateJWT(string $role) {
     $payload = [
-      'user_id' => $userId,
+      'role' => $role,
       'exp' => time() + $this->tokenValidity
     ];
     return JWT::generate($payload);
