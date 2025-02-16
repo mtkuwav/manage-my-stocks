@@ -203,3 +203,104 @@ Cette structure permet :
 - La gestion des workflows de commandes
 - L'audit de toutes les modifications
 - Une API sécurisée avec JWT
+
+
+
+___
+___
+
+
+
+## Prompt :
+**comment implémenter la fonction decryptToken qui permet de déchiffrer un token jwt et de vérifier sa signature pour assurer l'authenticité et l'intégrité des données?**
+
+## Réponse (GitHub Copilot avec Claude Sonnet 3.5) :
+Je vais vous expliquer comment implémenter la fonction `decryptToken` dans votre classe JWT. Cette fonction doit :
+1. Vérifier la validité du token
+2. Décoder le payload
+3. Vérifier la signature
+
+Voici l'implémentation :
+
+```php
+public static function decryptToken($token) {
+    // Séparer le token en ses composants
+    $segments = explode('.', $token);
+    
+    // Vérifier la structure du token
+    if (count($segments) !== 3) {
+        throw new \Exception("Invalid token structure");
+    }
+    
+    list($header, $payload, $signature) = $segments;
+    
+    // Vérifier la signature
+    $expectedSignature = self::base64UrlEncode(
+        hash_hmac('sha256', "$header.$payload", self::$secret, true)
+    );
+    
+    if (!hash_equals($expectedSignature, $signature)) {
+        throw new \Exception("Invalid signature");
+    }
+    
+    // Décoder le payload
+    $decodedPayload = json_decode(
+        base64_decode(strtr($payload, '-_', '+/')), 
+        true
+    );
+    
+    // Vérifier l'expiration si elle existe
+    if (isset($decodedPayload['exp']) && $decodedPayload['exp'] < time()) {
+        throw new \Exception("Token has expired");
+    }
+    
+    return $decodedPayload;
+}
+```
+
+### Utilisation de la fonction
+
+```php
+try {
+    $token = "eyJhbGciOiJIUzI1NiI..."; // Votre token JWT
+    $decodedToken = JWT::decryptToken($token);
+    
+    // Accéder aux données du token
+    $userId = $decodedToken['user_id'];
+    $role = $decodedToken['role'];
+    
+} catch (\Exception $e) {
+    // Gérer les erreurs (token invalide, expiré, etc.)
+    echo "Error: " . $e->getMessage();
+}
+```
+
+### La fonction effectue les vérifications suivantes :
+
+1. **Structure du token** :
+   - Vérifie que le token a 3 parties (header, payload, signature)
+
+2. **Signature** :
+   - Recalcule la signature attendue
+   - Compare avec la signature reçue
+   - Utilise `hash_equals` pour une comparaison sécurisée
+
+3. **Expiration** :
+   - Vérifie si le token a une date d'expiration
+   - Compare avec le temps actuel
+
+4. **Décodage** :
+   - Décode le payload en Base64Url
+   - Convertit le JSON en tableau PHP
+
+### Gestion des erreurs :
+
+- Structure invalide
+- Signature invalide
+- Token expiré
+
+Cette implémentation assure :
+- ✅ L'intégrité des données
+- ✅ L'authenticité du token
+- ✅ La validation de l'expiration
+- ✅ Une gestion sécurisée des erreurs

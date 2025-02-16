@@ -4,3 +4,4 @@ database
 vendor
 composer.lock
 .users.txt
+tests/
