@@ -5,6 +5,13 @@ namespace App\Middlewares;
 use App\Utils\JWT;
 
 class AuthMiddleware {
+
+    /**
+     * Handles the incoming request and processes it accordingly
+     * @param mixed $request The incoming request object
+     * @return bool The response object after processing the request
+     * @author Rémis Rubis
+     */
     public function handle($request) {
         $headers = getallheaders();
         
@@ -35,7 +42,11 @@ class AuthMiddleware {
         return true;
     }
 
-    // Helper method to return an unauthorized response
+    /**
+     * Helper method to return an unauthorized response
+     * @return bool
+     * @author Rémis Rubis
+     */
     private function unauthorizedResponse() {
         // Here, you could return a response with a 401 status code and an error message
         echo json_encode(['error' => "Unauthorized"]);
