@@ -679,3 +679,115 @@ Exemple de réponse :
     "token_type": "Bearer"
 }
 ```
+
+
+
+___
+___
+
+
+
+## Prompt :
+**Est-ce une bonne idée que la route /auth/login renvoie à chaque fois l'access token et le refresh token ? Si un utilisateur s'authentifie plusieurs fois, à chaque fois il génère un nouveau token, est-ce vraiment sécurisé ?**
+
+## Réponse :
+Non, ce n'est pas une pratique optimale de sécurité. Voici pourquoi et comment l'améliorer :
+
+### Problèmes actuels
+1. Multiplication des refresh tokens actifs
+2. Pas de limite au nombre de sessions
+3. Pas de révocation des anciens tokens
+4. Risque de vol de session multiple
+
+### Solution proposée
+
+Modifier `AuthModel.php` pour gérer les sessions :
+
+```php
+class AuthModel extends SqlConnect {
+    private int $maxActiveSessions = 5;  // Limite par utilisateur
+
+    public function login($email, $password) {
+        // ... vérification des credentials ...
+
+        if (password_verify($saltedPassword, $user['password_hash'])) {
+            // Vérifier si un refresh token valide existe déjà
+            $existingToken = $this->getValidRefreshToken($user['id']);
+            
+            if ($existingToken) {
+                // Générer uniquement un nouveau access token
+                $accessToken = $this->generateJWT($user['id'], $user['role']);
+                return [
+                    'access_token' => $accessToken,
+                    'refresh_token' => $existingToken['token'],
+                    'expires_in' => $this->accessTokenValidity
+                ];
+            }
+
+            // Vérifier le nombre de sessions actives
+            $this->cleanupOldSessions($user['id']);
+            
+            // Générer de nouveaux tokens si nécessaire
+            $accessToken = $this->generateJWT($user['id'], $user['role']);
+            $refreshToken = $this->generateRefreshToken($user['id']);
+            
+            return [
+                'access_token' => $accessToken,
+                'refresh_token' => $refreshToken,
+                'expires_in' => $this->accessTokenValidity
+            ];
+        }
+    }
+
+    private function getValidRefreshToken($userId) {
+        $query = "SELECT * FROM refresh_tokens 
+                 WHERE user_id = :user_id 
+                 AND expires_at > NOW() 
+                 AND revoked = 0 
+                 ORDER BY created_at DESC 
+                 LIMIT 1";
+        
+        $req = $this->db->prepare($query);
+        $req->execute(['user_id' => $userId]);
+        return $req->fetch(PDO::FETCH_ASSOC);
+    }
+
+    private function cleanupOldSessions($userId) {
+        // Compter les sessions actives
+        $query = "SELECT COUNT(*) FROM refresh_tokens 
+                 WHERE user_id = :user_id 
+                 AND expires_at > NOW() 
+                 AND revoked = 0";
+        
+        $req = $this->db->prepare($query);
+        $req->execute(['user_id' => $userId]);
+        $count = $req->fetchColumn();
+
+        if ($count >= $this->maxActiveSessions) {
+            // Révoquer les plus anciens tokens
+            $query = "UPDATE refresh_tokens 
+                     SET revoked = 1 
+                     WHERE user_id = :user_id 
+                     AND revoked = 0 
+                     ORDER BY created_at ASC 
+                     LIMIT " . ($count - $this->maxActiveSessions + 1);
+            
+            $req = $this->db->prepare($query);
+            $req->execute(['user_id' => $userId]);
+        }
+    }
+}
+```
+
+### Avantages de cette approche :
+- ✅ Réutilisation des refresh tokens existants
+- ✅ Limite du nombre de sessions actives
+- ✅ Nettoyage automatique des anciennes sessions
+- ✅ Meilleure gestion de la sécurité
+
+### Comportement :
+1. Si un refresh token valide existe → renvoie uniquement un nouveau access token
+2. Si pas de token valide → crée une nouvelle paire de tokens
+3. Si trop de sessions → révoque les plus anciennes
+
+Cette approche est plus sécurisée et plus efficace en termes de gestion des ressources.
