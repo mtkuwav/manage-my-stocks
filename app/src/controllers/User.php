@@ -27,7 +27,7 @@ class User extends Controller {
     return $this->user->get(intval($this->params['id']));
   }
 
-  #[Route("GET", "/users", middlewares: [AuthMiddleware::class])]
+  #[Route("GET", "/users", middlewares: [AuthMiddleware::class], allowedRoles:['admin'])]
   public function getUsers() {
       $limit = isset($this->params['limit']) ? intval($this->params['limit']) : null;
       return $this->user->getAll($limit);

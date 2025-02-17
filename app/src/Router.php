@@ -30,7 +30,7 @@ class Router {
                 foreach ($attributes as $attribute) {
                     $instance = $attribute->newInstance();
                     // Register route with method, path, controller, and authentication requirement
-                    $this->register($instance->method, $instance->path, $controller, $method->getName(), $instance->middlewares);
+                    $this->register($instance->method, $instance->path, $controller, $method->getName(), $instance->middlewares, $instance->allowedRoles);
                 }
             }
         }
@@ -44,9 +44,10 @@ class Router {
      * @param string $controller Controller class handling the route
      * @param string $controllerMethod Method name in the controller
      * @param bool $authRequired Whether authentication is required for this route
+     * @param array $allowedRoles An array of roles that are permitted to access the route
      */
-    public function register(string $method, string $route, string $controller, string $controllerMethod, array $middlewares) {
-        $this->routes[$method][$route] = [$controller, $controllerMethod, $middlewares];
+    public function register(string $method, string $route, string $controller, string $controllerMethod, array $middlewares, array $allowedRoles = ['admin', 'manager']) {
+        $this->routes[$method][$route] = [$controller, $controllerMethod, $middlewares, $allowedRoles];
     }
 
     /**
@@ -58,12 +59,12 @@ class Router {
 
         foreach ($this->routes[$this->method] as $route => $action) {
             if ($this->matchRule($this->url, $route)) {
-                list($controller, $method, $middlewares) = $action;
+                list($controller, $method, $middlewares, $allowedRoles) = $action;
                 $pathParams = $this->extractParams($this->url, $route);
 
-                // Execute middlewares
+                // Execute middlewares with allowed roles
                 foreach ($middlewares as $middlewareClass) {
-                    $middleware = new $middlewareClass();
+                    $middleware = new $middlewareClass($allowedRoles);
                     if (method_exists($middleware, 'handle') && !$middleware->handle($_REQUEST, $pathParams['id'] ?? null)) {
                         http_response_code(403);
                         $response = ["error" => "Forbidden"];
