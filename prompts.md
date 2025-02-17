@@ -304,3 +304,274 @@ Cette implémentation assure :
 - ✅ L'authenticité du token
 - ✅ La validation de l'expiration
 - ✅ Une gestion sécurisée des erreurs
+
+
+
+___
+___
+
+
+
+## Prompt :
+**Comment faire en sorte de différencier l'accès à certaines routes par rapport au rôle indiqué dans le token ? Il faut que cela corresponde avec l'architecture actuelle de la codebase. Si possible, j'aimerais éviter de toucher au routeur.**
+
+## Réponse :
+Pour ajouter la vérification des rôles dans l'architecture existante, nous pouvons modifier `AuthMiddleware` pour accepter les rôles autorisés via les attributs de route. Voici la solution :
+
+1. **Modifier la classe Route pour accepter les rôles** :
+
+```php
+#[\Attribute]
+class Route {
+    public string $method;
+    public string $path;
+    public array $middlewares;
+    public array $allowedRoles;
+
+    public function __construct(
+        string $method, 
+        string $path, 
+        array $middlewares = [], 
+        array $allowedRoles = ['admin', 'manager']
+    ) {
+        $this->method = strtoupper($method);
+        $this->path = $path;
+        $this->middlewares = $middlewares;
+        $this->allowedRoles = $allowedRoles;
+    }
+}
+```
+
+2. **Modifier AuthMiddleware pour vérifier les rôles** :
+
+```php
+class AuthMiddleware {
+    private array $allowedRoles;
+
+    public function __construct(array $allowedRoles = ['admin', 'manager']) {
+        $this->allowedRoles = $allowedRoles;
+    }
+
+    public function handle($request) {
+        $headers = getallheaders();
+        
+        if (!isset($headers['Authorization'])) {
+            error_log("Authorization header not set");
+            return $this->unauthorizedResponse();
+        }
+
+        $authHeader = $headers['Authorization'];
+
+        if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            error_log("Bearer token not found in Authorization header");
+            return $this->unauthorizedResponse();
+        }
+
+        $jwt = $matches[1];
+
+        try {
+            // Décrypter le token pour obtenir le rôle
+            $payload = JWT::decryptToken($jwt);
+            
+            if (!isset($payload['role'])) {
+                error_log("No role in token");
+                return $this->unauthorizedResponse();
+            }
+
+            // Vérifier si le rôle est autorisé
+            if (!in_array($payload['role'], $this->allowedRoles)) {
+                error_log("Unauthorized role: " . $payload['role']);
+                return $this->forbiddenResponse();
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            error_log("JWT verification failed: " . $e->getMessage());
+            return $this->unauthorizedResponse();
+        }
+    }
+
+    private function unauthorizedResponse() {
+        echo json_encode(['error' => "Unauthorized"]);
+        http_response_code(401);
+        return false;
+    }
+
+    private function forbiddenResponse() {
+        echo json_encode(['error' => "Forbidden: Insufficient privileges"]);
+        http_response_code(403);
+        return false;
+    }
+}
+```
+
+3. **Utilisation dans les contrôleurs** :
+
+```php
+class User extends Controller {
+    // Route accessible uniquement aux admins
+    #[Route("GET", "/users", 
+        middlewares: [AuthMiddleware::class],
+        allowedRoles: ['admin']
+    )]
+    public function getUsers() {
+        $limit = isset($this->params['limit']) ? intval($this->params['limit']) : null;
+        return $this->user->getAll($limit);
+    }
+
+    // Route accessible aux admins et managers
+    #[Route("GET", "/users/:id", 
+        middlewares: [AuthMiddleware::class],
+        allowedRoles: ['admin', 'manager']
+    )]
+    public function getUser() {
+        return $this->user->get(intval($this->params['id']));
+    }
+}
+```
+
+Cette approche permet de :
+- ✅ Définir les rôles autorisés au niveau des routes
+- ✅ Vérifier les rôles dans le middleware sans modifier le routeur
+- ✅ Maintenir la séparation des responsabilités
+- ✅ Utiliser la structure JWT existante
+- ✅ Fournir des messages d'erreur appropriés
+
+Le flux d'exécution sera :
+1. Route définie avec rôles autorisés
+2. Middleware vérifie le token
+3. Middleware extrait et vérifie le rôle
+4. Accès accordé ou refusé selon le rôle
+
+
+
+___
+___
+
+
+
+## Prompt :
+**Un manager peut toujours effectuer la requête /users alors que ce ne sont que les admins qui sont censés pouvoir la faire, pourquoi ?**
+
+## Réponse :
+Le problème vient de deux endroits :
+
+1. Dans le constructeur de `AuthMiddleware`, les rôles par défaut incluent `manager` :
+
+```php
+public function __construct(array $allowedRoles = ['admin', 'manager']) {
+    $this->allowedRoles = $allowedRoles;
+}
+```
+
+2. Le `Router` ne passe pas les `allowedRoles` de l'attribut `Route` au middleware :
+
+```php
+foreach ($middlewares as $middlewareClass) {
+    $middleware = new $middlewareClass();  // Ici, les allowedRoles ne sont pas passés
+    if (method_exists($middleware, 'handle') && !$middleware->handle($_REQUEST, $pathParams['id'] ?? null)) {
+        // ...
+    }
+}
+```
+
+Pour corriger cela, il faut modifier le `Router` pour passer les rôles autorisés :
+
+```php
+public function register(string $method, string $route, string $controller, string $controllerMethod, array $middlewares, array $allowedRoles = ['admin', 'manager']) {
+    $this->routes[$method][$route] = [$controller, $controllerMethod, $middlewares, $allowedRoles];
+}
+
+public function run() {
+    // ...existing code...
+    if ($this->matchRule($this->url, $route)) {
+        list($controller, $method, $middlewares, $allowedRoles) = $action;
+        
+        // Execute middlewares with allowed roles
+        foreach ($middlewares as $middlewareClass) {
+            $middleware = new $middlewareClass($allowedRoles);  // Passer les rôles autorisés
+            if (method_exists($middleware, 'handle') && !$middleware->handle($_REQUEST, $pathParams['id'] ?? null)) {
+                // ...
+            }
+        }
+        // ...existing code...
+    }
+    // ...existing code...
+}
+```
+
+Ainsi, les rôles définis dans l'attribut `Route` seront correctement utilisés par le middleware.
+
+
+
+## Prompt :
+**voici l'erreur que j'obtiens :**
+
+```
+Warning: Undefined array key 3 in /var/www/html/src/Router.php on line 61
+
+Fatal error: Uncaught TypeError: App\Middlewares\AuthMiddleware::__construct(): Argument #1 ($allowedRoles) must be of type array, null given, called in /var/www/html/src/Router.php on line 66 and defined in /var/www/html/src/middlewares/AuthMiddleware.php:10 Stack trace: #0 /var/www/html/src/Router.php(66): App\Middlewares\AuthMiddleware->__construct(NULL) #1 /var/www/html/index.php(17): App\Router->run() #2 {main} thrown in /var/www/html/src/middlewares/AuthMiddleware.php on line 10
+```
+
+## Réponse :
+Le problème vient du fait que la méthode `register` ne stocke pas les `allowedRoles` dans le tableau des routes. Voici les corrections nécessaires :
+
+```php
+/**
+ * Register a single route.
+ */
+public function register(string $method, string $route, string $controller, string $controllerMethod, array $middlewares) {
+    // Changer cette ligne pour inclure les allowedRoles
+    $this->routes[$method][$route] = [$controller, $controllerMethod, $middlewares, ['admin', 'manager']];
+}
+
+/**
+ * Register all controllers and their routes.
+ */
+public function registerControllers(array $controllers) {
+    foreach ($controllers as $controller) {
+        $reflection = new \ReflectionClass($controller);
+        foreach ($reflection->getMethods() as $method) {
+            $attributes = $method->getAttributes(Route::class);
+            foreach ($attributes as $attribute) {
+                $instance = $attribute->newInstance();
+                // Ajouter les allowedRoles de l'attribut Route
+                $this->register(
+                    $instance->method, 
+                    $instance->path, 
+                    $controller, 
+                    $method->getName(), 
+                    $instance->middlewares,
+                    $instance->allowedRoles
+                );
+            }
+        }
+    }
+}
+```
+
+Ensuite, mettez à jour la signature de la méthode `register` pour accepter les `allowedRoles` :
+
+```php
+public function register(
+    string $method, 
+    string $route, 
+    string $controller, 
+    string $controllerMethod, 
+    array $middlewares,
+    array $allowedRoles = ['admin', 'manager']
+) {
+    $this->routes[$method][$route] = [
+        $controller, 
+        $controllerMethod, 
+        $middlewares,
+        $allowedRoles
+    ];
+}
+```
+
+Ces modifications :
+- Ajoutent le paramètre `$allowedRoles` à la méthode `register`
+- Passent correctement les rôles depuis l'attribut Route
+- Stockent les rôles dans le tableau des routes
+- Corrigent l'erreur d'index indéfini et l'argument null
