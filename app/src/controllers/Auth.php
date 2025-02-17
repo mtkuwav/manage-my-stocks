@@ -36,8 +36,8 @@ class Auth extends Controller {
           if (empty($data['email']) || empty($data['password'])) {
               throw new HttpException("Missing email or password.", 400);
           }
-          $token = $this->auth->login($data['email'], $data['password']);
-          return $token;
+          $tokens = $this->auth->login($data['email'], $data['password']);
+          return $tokens;
       } catch (\Exception $e) {
           throw new HttpException($e->getMessage(), 401);
       }

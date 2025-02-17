@@ -575,3 +575,107 @@ Ces modifications :
 - Passent correctement les rôles depuis l'attribut Route
 - Stockent les rôles dans le tableau des routes
 - Corrigent l'erreur d'index indéfini et l'argument null
+
+
+
+## Prompt : 
+**Serait-ce une bonne idée de combiner la méthode login avec la table refresh_tokens puisque login génère un nouveau token ?**
+
+## Réponse :
+Oui, c'est une excellente idée de combiner la méthode `login` avec la table `refresh_tokens`. Voici comment modifier le code :
+
+```php
+#[Route("POST", "/auth/login")]
+public function login() {
+    try {
+        $data = $this->body;
+        if (empty($data['email']) || empty($data['password'])) {
+            throw new HttpException("Missing email or password.", 400);
+        }
+        
+        // AuthModel retournera maintenant access_token ET refresh_token
+        $tokens = $this->auth->login($data['email'], $data['password']);
+        return $tokens;
+        
+    } catch (\Exception $e) {
+        throw new HttpException($e->getMessage(), 401);
+    }
+}
+```
+
+```php
+class AuthModel extends SqlConnect {
+    private int $accessTokenValidity = 3600; // 1 heure
+    private int $refreshTokenValidity = 604800; // 7 jours
+
+    public function login($email, $password) {
+        $query = "SELECT * FROM users WHERE email = :email";
+        $req = $this->db->prepare($query);
+        $req->execute(['email' => $email]);
+        $user = $req->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            throw new HttpException("Invalid credentials", 401);
+        }
+
+        $saltedPassword = $password . $this->passwordSalt;
+        if (!password_verify($saltedPassword, $user['password_hash'])) {
+            throw new HttpException("Invalid credentials", 401);
+        }
+
+        // Générer l'access token
+        $accessToken = $this->generateAccessToken($user['id'], $user['role']);
+
+        // Générer et sauvegarder le refresh token
+        $refreshToken = $this->generateRefreshToken($user['id']);
+
+        return [
+            'access_token' => $accessToken,
+            'refresh_token' => $refreshToken,
+            'expires_in' => $this->accessTokenValidity,
+            'token_type' => 'Bearer'
+        ];
+    }
+
+    private function generateAccessToken($userId, $role) {
+        $payload = [
+            'user_id' => $userId,
+            'role' => $role,
+            'exp' => time() + $this->accessTokenValidity
+        ];
+        return JWT::generate($payload);
+    }
+
+    private function generateRefreshToken($userId) {
+        $token = bin2hex(random_bytes(32));
+        $expiresAt = date('Y-m-d H:i:s', time() + $this->refreshTokenValidity);
+
+        $query = "INSERT INTO refresh_tokens (token, user_id, expires_at) 
+                 VALUES (:token, :user_id, :expires_at)";
+        $req = $this->db->prepare($query);
+        $req->execute([
+            'token' => $token,
+            'user_id' => $userId,
+            'expires_at' => $expiresAt
+        ]);
+
+        return $token;
+    }
+}
+```
+
+Cette approche offre plusieurs avantages :
+- ✅ Génération simultanée des deux tokens
+- ✅ Une seule requête d'authentification
+- ✅ Réponse complète avec toutes les informations nécessaires
+- ✅ Meilleure sécurité avec rotation des tokens
+
+Exemple de réponse :
+```json
+{
+    "access_token": "eyJhbG...",
+    "refresh_token": "a1b2c3...",
+    "expires_in": 3600,
+    "token_type": "Bearer"
+}
+```
