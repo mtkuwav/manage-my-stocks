@@ -66,9 +66,7 @@ class Router {
                 foreach ($middlewares as $middlewareClass) {
                     $middleware = new $middlewareClass($allowedRoles);
                     if (method_exists($middleware, 'handle') && !$middleware->handle($_REQUEST, $pathParams['id'] ?? null)) {
-                        http_response_code(403);
-                        $response = ["error" => "Forbidden"];
-                        break 2;
+                        return;
                     }
                 }
 

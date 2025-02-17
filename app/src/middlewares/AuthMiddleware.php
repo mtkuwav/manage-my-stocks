@@ -64,7 +64,8 @@ class AuthMiddleware {
      */
     private function unauthorizedResponse() {
         // Here, you could return a response with a 401 status code and an error message
-        echo json_encode(['error' => "Unauthorized"]);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => "Unauthorized: Invalid or expired token"]);
         http_response_code(401);
         return false;
     }
@@ -75,6 +76,7 @@ class AuthMiddleware {
      * @author Mathieu Chauvet
      */
     private function forbiddenResponse() {
+        header('Content-Type: application/json');
         echo json_encode(['error' => "Forbidden: Insufficient privileges"]);
         http_response_code(403);
         return false;
