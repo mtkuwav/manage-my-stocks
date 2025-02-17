@@ -65,7 +65,7 @@ class Router {
                 // Execute middlewares with allowed roles
                 foreach ($middlewares as $middlewareClass) {
                     $middleware = new $middlewareClass($allowedRoles);
-                    if (method_exists($middleware, 'handle') && !$middleware->handle($_REQUEST, $pathParams['id'] ?? null)) {
+                    if (method_exists($middleware, 'handle') && !$middleware->handle()) {
                         return;
                     }
                 }

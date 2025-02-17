@@ -17,7 +17,7 @@ class AuthMiddleware {
      * @return bool The response object after processing the request
      * @author Rémis Rubis, Mathieu Chauvet
      */
-    public function handle($request) {
+    public function handle() {
         $headers = getallheaders();
         
         // Check if the Authorization header is set
