@@ -1123,3 +1123,338 @@ Content-Type: application/json
 ```
 
 Ces modifications devraient résoudre le problème d'extraction du token et de validation de la signature.
+
+
+
+___
+___
+
+
+
+## Prompt :
+**J'ai un probème: j'ai code 500 alors que le message est correct quand j'omets l'email dans register ("error": "Missing email, username or password."). Cela est pareil pour les autres routes, c'est le bon message mais pas le bon code d'erreur. Peut être que cela vient du middleware ou du modèle ? À contrario la gestion d'erreurs fonctionne bien avec les routes du contrôleur User. Comment résoudre ce problème de code d'erreur incorrect ?**
+
+## Réponse (Github Copilot avec GTP 4o) :
+Le problème semble venir de la gestion des exceptions dans le routeur. Actuellement, le routeur attrape toutes les exceptions et renvoie un code 500 par défaut. Pour résoudre ce problème, nous devons nous assurer que les exceptions `HttpException` sont correctement propagées avec le bon code d'erreur.
+
+Voici comment corriger cela dans le routeur :
+
+### 1. Modifiez Router.php pour gérer correctement les exceptions `HttpException` :
+
+```php
+namespace App;
+
+use App\Utils\Route;
+use App\Utils\JWT;
+use App\Utils\HttpException;
+use App\Middlewares\AuthMiddleware;
+
+class Router {
+    protected array $routes = [];
+    protected string $url;
+    protected string $method;
+
+    public function __construct() {
+        // Parse the current request URL and method
+        $this->url = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $this->method = $_SERVER['REQUEST_METHOD'];
+    }
+
+    /**
+     * Register all controllers and their routes.
+     *
+     * @param array $controllers List of controller classes to register
+     */
+    public function registerControllers(array $controllers) {
+        foreach ($controllers as $controller) {
+            $reflection = new \ReflectionClass($controller);
+            foreach ($reflection->getMethods() as $method) {
+                $attributes = $method->getAttributes(Route::class);
+                foreach ($attributes as $attribute) {
+                    $instance = $attribute->newInstance();
+                    // Register route with method, path, controller, and authentication requirement
+                    $this->register($instance->method, $instance->path, $controller, $method->getName(), $instance->middlewares, $instance->allowedRoles);
+                }
+            }
+        }
+    }
+
+    /**
+     * Register a single route.
+     *
+     * @param string $method HTTP method (GET, POST, etc.)
+     * @param string $route URL pattern for the route
+     * @param string $controller Controller class handling the route
+     * @param string $controllerMethod Method name in the controller
+     * @param bool $authRequired Whether authentication is required for this route
+     * @param array $allowedRoles An array of roles that are permitted to access the route
+     */
+    public function register(string $method, string $route, string $controller, string $controllerMethod, array $middlewares, array $allowedRoles = ['admin', 'manager']) {
+        $this->routes[$method][$route] = [$controller, $controllerMethod, $middlewares, $allowedRoles];
+    }
+
+    /**
+     * Execute the route matching the current request.
+     */
+    public function run() {
+        $response = null;
+        ob_start(); // Start output buffering to capture any output
+
+        foreach ($this->routes[$this->method] as $route => $action) {
+            if ($this->matchRule($this->url, $route)) {
+                list($controller, $method, $middlewares, $allowedRoles) = $action;
+                $pathParams = $this->extractParams($this->url, $route);
+
+                // Execute middlewares with allowed roles
+                foreach ($middlewares as $middlewareClass) {
+                    $middleware = new $middlewareClass($allowedRoles);
+                    if (method_exists($middleware, 'handle') && !$middleware->handle()) {
+                        return;
+                    }
+                }
+
+                $queryParams = $_GET; // Automatically populated by PHP with query parameters
+                $params = array_merge($pathParams, $queryParams);
+                $controllerInstance = new $controller($params);
+
+                // Check if the method exists in the controller
+                if (method_exists($controllerInstance, $method)) {
+                    try {
+                        // Call the method on the controller instance with the parameters
+                        $response = call_user_func_array([$controllerInstance, $method], array_values($params));
+                    } catch (HttpException $e) {
+                        http_response_code($e->getHttpCode());
+                        $response = ["error" => $e->getMessage()];
+                    } catch (\Exception $e) {
+                        http_response_code(500);
+                        $response = ["error" => $e->getMessage()];
+                    }
+                } else {
+                    http_response_code(405);
+                    $response = ["error" => "Method Not Allowed"];
+                }
+                break;
+            }
+        }
+
+        // If no matching route was found, set the response to a "Not Found" error with a 404 status code
+        if ($response === null) {
+            http_response_code(404);
+            $response = ["error" => "Not Found"];
+        }
+
+        ob_end_clean(); // End output buffering and clean the buffer
+        header('Content-Type: application/json');
+        echo json_encode($response);
+    }
+
+    /**
+     * Check the authorization of the current request.
+     *
+     * @return bool True if the request is authorized, false otherwise
+     */
+    protected function checkAuth() {
+        $headers = getallheaders();
+        if (!isset($headers['Authorization'])) {
+            return false;
+        }
+
+        $authHeader = $headers['Authorization'];
+        if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            $jwt = $matches[1];
+            // Verify the JWT token
+            return JWT::verify($jwt);
+        }
+
+        return false;
+    }
+
+    /**
+     * Match the URL against the given route pattern.
+     *
+     * @param string $url The requested URL
+     * @param string $route The route pattern to match against
+     * @return bool True if the URL matches the route pattern, false otherwise
+     */
+    protected function matchRule($url, $route) {
+        $urlParts = explode('/', trim($url, '/'));
+        $routeParts = explode('/', trim($route, '/'));
+        if (count($urlParts) !== count($routeParts)) {
+            return false;
+        }
+        foreach ($routeParts as $index => $routePart) {
+            if ($routePart !== $urlParts[$index] && strpos($routePart, ':') !== 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Extract parameters from the URL based on the route pattern.
+     *
+     * @param string $url The requested URL
+     * @param string $route The route pattern with parameter placeholders
+     * @return array Associative array of parameters extracted from the URL
+     */
+    protected function extractParams($url, $route) {
+        $params = [];
+        $urlParts = explode('/', trim($url, '/'));
+        $routeParts = explode('/', trim($route, '/'));
+        foreach ($routeParts as $index => $routePart) {
+            if (strpos($routePart, ':') === 0 && isset($urlParts[$index])) {
+                $paramName = substr($routePart, 1);
+                $params[$paramName] = $urlParts[$index];
+            }
+        }
+        return $params;
+    }
+}
+```
+
+### 2. Modifiez HttpException.php pour inclure le code HTTP :
+
+```php
+namespace App\Utils;
+
+use Exception;
+
+class HttpException extends Exception {
+    const HTTP_BAD_REQUEST = 400;
+    const HTTP_UNAUTHORIZED = 401;
+    const HTTP_FORBIDDEN = 403;
+    const HTTP_NOT_FOUND = 404;
+    const HTTP_METHOD_NOT_ALLOWED = 405;
+    const HTTP_INTERNAL_SERVER_ERROR = 500;
+
+    protected $httpCode;
+
+    public function __construct($message, $httpCode, $code = 0, Exception $previous = null) {
+        $this->httpCode = $httpCode;
+        parent::__construct($message, $code, $previous);
+    }
+
+    public function getHttpCode() {
+        return $this->httpCode;
+    }
+}
+```
+
+### 3. Assurez-vous que les exceptions `HttpException` sont correctement levées dans Auth.php :
+
+```php
+class Auth extends Controller {
+    // ...existing code...
+
+    #[Route("POST", "/auth/register")]
+    public function register() {
+        try {
+            $data = $this->body;
+            if (empty($data['email']) || empty($data['password']) || empty($data['username'])) {
+                throw new HttpException("Missing email, username or password.", 400);
+            }
+            $user = $this->auth->register($data);
+            return $user;
+        } catch (HttpException $e) {
+            throw new HttpException($e->getMessage(), $e->getHttpCode());
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 500);
+        }
+    }
+
+    #[Route("POST", "/auth/login")]
+    public function login() {
+        try {
+            $data = $this->body;
+            if (empty($data['email']) || empty($data['password'])) {
+                throw new HttpException("Missing email or password.", 400);
+            }
+            $tokens = $this->auth->login($data['email'], $data['password']);
+            return $tokens;
+        } catch (HttpException $e) {
+            throw new HttpException($e->getMessage(), $e->getHttpCode());
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 500);
+        }
+    }
+
+    #[Route("POST", "/auth/logout")]
+    public function logout() {
+        try {
+            $data = $this->body;
+            if (empty($data['refresh_token'])) {
+                throw new HttpException("Refresh token is required", 400);
+            }
+
+            $authHeader = getallheaders()['Authorization'];
+            if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+                throw new HttpException("Invalid Authorization header format", 401);
+            }
+
+            $jwt = $matches[1];
+            $payload = JWT::decryptToken($jwt);
+            
+            if (!isset($payload['user_id'])) {
+                throw new HttpException("Invalid token payload", 401);
+            }
+
+            if ($this->auth->revokeToken($data['refresh_token'], $payload['user_id'])) {
+                return ["message" => "Successfully logged out"];
+            }
+            
+            throw new HttpException("Failed to logout", 500);
+        } catch (HttpException $e) {
+            throw new HttpException($e->getMessage(), $e->getHttpCode());
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 500);
+        }
+    }
+
+    #[Route("POST", "/auth/logout/all")]
+    public function logoutAll() {
+        try {
+            $authHeader = getallheaders()['Authorization'];
+            if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+                throw new HttpException("Invalid Authorization header format", 401);
+            }
+
+            $jwt = $matches[1];
+            $payload = JWT::decryptToken($jwt);
+            
+            if (!isset($payload['user_id'])) {
+                throw new HttpException("Invalid token payload", 401);
+            }
+
+            if ($this->auth->revokeAllTokens($payload['user_id'])) {
+                return ["message" => "Successfully logged out from all sessions"];
+            }
+
+            throw new HttpException("Failed to logout", 500);
+        } catch (HttpException $e) {
+            throw new HttpException($e->getMessage(), $e->getHttpCode());
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 500);
+        }
+    }
+
+    #[Route("POST", "/auth/refresh")]
+    public function refresh() {
+        try {
+            $data = $this->body;
+            if (empty($data['refresh_token'])) {
+                throw new HttpException("Refresh token is required", 400);
+            }
+
+            $tokens = $this->auth->refreshAccessToken($data['refresh_token']);
+            return $tokens;
+
+        } catch (HttpException $e) {
+            throw new HttpException($e->getMessage(), $e->getHttpCode());
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 500);
+        }
+    }
+}
+```
+
+Ces modifications devraient permettre de propager correctement les codes d'erreur HTTP et d'éviter les erreurs 500 non désirées.
