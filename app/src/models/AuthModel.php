@@ -200,4 +200,41 @@ class AuthModel extends SqlConnect {
             $req->execute(['user_id' => $userId]);
         }
     }
+    
+    /**
+     * Revokes a refresh token
+     * 
+     * @param string $refreshToken The refresh token to revoke
+     * @param int $userId The user ID for additional security
+     * @return bool True if token was revoked, false otherwise
+     * @author Mathieu Chauvet
+     */
+    public function revokeToken($refreshToken, $userId) {
+        $query = "UPDATE $this->tableRefresh 
+                SET revoked = 1 
+                WHERE token = :token 
+                AND user_id = :user_id";
+
+        $req = $this->db->prepare($query);
+        return $req->execute([
+            'token' => $refreshToken,
+            'user_id' => $userId
+        ]);
+    }
+
+    /**
+     * Revokes all refresh tokens for a user
+     * 
+     * @param int $userId The user ID
+     * @return bool True if tokens were revoked, false otherwise
+     */
+    public function revokeAllTokens($userId) {
+        $query = "UPDATE $this->tableRefresh 
+                SET revoked = 1 
+                WHERE user_id = :user_id 
+                AND revoked = 0";
+
+        $req = $this->db->prepare($query);
+        return $req->execute(['user_id' => $userId]);
+    }
 }

@@ -4,43 +4,111 @@ namespace App\Controllers;
 
 use App\Controllers\Controller;
 use App\Models\AuthModel;
-use App\Utils\{Route, HttpException};
+use App\Utils\{Route, HttpException, JWT};
 
 class Auth extends Controller {
-  protected object $auth;
+    protected object $auth;
 
-  public function __construct($params) {
-    $this->auth = new AuthModel();
-    parent::__construct($params);
-  }
+    public function __construct($params) {
+        $this->auth = new AuthModel();
+        parent::__construct($params);
+    }
+
+    /**
+     * Register a new user with email, password and username
+     * 
+     * @throws HttpException if email, password or username is missing
+     * @throws HttpException if registration fails
+     * @return array containing the created user data
+     * @author Rémis Rubis
+     */
+    #[Route("POST", "/auth/register")]
+    public function register() {
+        try {
+            $data = $this->body;
+            if (empty($data['email']) || empty($data['password']) || empty($data['username'])) {
+                throw new HttpException("Missing email, username or password.", 400);
+            }
+            $user = $this->auth->register($data);
+            return $user;
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 400);
+        }
+    }
 
 
-  #[Route("POST", "/auth/register")]
-  public function register() {
-      try {
-          $data = $this->body;
-          if (empty($data['email']) || empty($data['password']) || empty($data['username'])) {
-              throw new HttpException("Missing email, username or password.", 400);
-          }
-          $user = $this->auth->register($data);
-          return $user;
-      } catch (\Exception $e) {
-          throw new HttpException($e->getMessage(), 400);
-      }
-  }
+    /**
+     * Authenticate a user and generate access and refresh tokens
+     * 
+     * @throws HttpException if email or password is missing
+     * @throws HttpException if authentication fails
+     * @return array containing access_token and refresh_token
+     * @author Rémis Rubis
+     */
+    #[Route("POST", "/auth/login")]
+    public function login() {
+        try {
+            $data = $this->body;
+            if (empty($data['email']) || empty($data['password'])) {
+                throw new HttpException("Missing email or password.", 400);
+            }
+            $tokens = $this->auth->login($data['email'], $data['password']);
+            return $tokens;
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 401);
+        }
+    }
 
-  #[Route("POST", "/auth/login")]
-  public function login() {
-      try {
-          $data = $this->body;
-          if (empty($data['email']) || empty($data['password'])) {
-              throw new HttpException("Missing email or password.", 400);
-          }
-          $tokens = $this->auth->login($data['email'], $data['password']);
-          return $tokens;
-      } catch (\Exception $e) {
-          throw new HttpException($e->getMessage(), 401);
-      }
-  }
+    /**
+     * Logout the authenticated user by revoking their refresh token
+     * 
+     * @throws HttpException if refresh token is missing
+     * @throws HttpException if logout fails
+     * @return array containing success message
+     * @author Mathieu Chauvet
+     */
+    #[Route("POST", "/auth/logout", middlewares: [AuthMiddleware::class])]
+    public function logout() {
+        try {
+            $data = $this->body;
+            if (empty($data['refresh_token'])) {
+                throw new HttpException("Refresh token is required", 400);
+            }
+
+            $jwt = JWT::decryptToken(getallheaders()['Authorization']);
+            $userId = $jwt['user_id'];
+
+            if ($this->auth->revokeToken($data['refresh_token'], $userId)) {
+                return ["message" => "Successfully logged out"];
+            }
+            
+            throw new HttpException("Failed to logout", 500);
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * Revoke all refresh tokens for the authenticated user
+     * 
+     * @throws HttpException if revocation fails
+     * @return array containing success message
+     * @author Mathieu Chauvet
+     */
+    #[Route("POST", "/auth/logout/all", middlewares: [AuthMiddleware::class])]
+    public function logoutAll() {
+        try {
+            $jwt = JWT::decryptToken(getallheaders()['Authorization']);
+            $userId = $jwt['user_id'];
+
+            if ($this->auth->revokeAllTokens($userId)) {
+                return ["message" => "Successfully logged out from all sessions"];
+            }
+
+            throw new HttpException("Failed to logout", 500);
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 400);
+        }
+    }
 
 }
