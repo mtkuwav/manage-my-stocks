@@ -32,8 +32,10 @@ class Auth extends Controller {
             }
             $user = $this->auth->register($data);
             return $user;
+        } catch (HttpException $e) {
+            throw new HttpException($e->getMessage(), $e->getHttpCode());
         } catch (\Exception $e) {
-            throw new HttpException($e->getMessage(), 400);
+            throw new HttpException($e->getMessage(), 500);
         }
     }
 
@@ -55,8 +57,10 @@ class Auth extends Controller {
             }
             $tokens = $this->auth->login($data['email'], $data['password']);
             return $tokens;
+        } catch (HttpException $e) {
+            throw new HttpException($e->getMessage(), $e->getHttpCode());
         } catch (\Exception $e) {
-            throw new HttpException($e->getMessage(), 401);
+            throw new HttpException($e->getMessage(), 500);
         }
     }
 
@@ -93,8 +97,10 @@ class Auth extends Controller {
             }
             
             throw new HttpException("Failed to logout", 500);
+        } catch (HttpException $e) {
+            throw new HttpException($e->getMessage(), $e->getHttpCode());
         } catch (\Exception $e) {
-            throw new HttpException($e->getMessage(), 400);
+            throw new HttpException($e->getMessage(), 500);
         }
     }
 
@@ -125,8 +131,10 @@ class Auth extends Controller {
             }
     
             throw new HttpException("Failed to logout", 500);
+        } catch (HttpException $e) {
+            throw new HttpException($e->getMessage(), $e->getHttpCode());
         } catch (\Exception $e) {
-            throw new HttpException($e->getMessage(), 400);
+            throw new HttpException($e->getMessage(), 500);
         }
     }
 
@@ -135,6 +143,7 @@ class Auth extends Controller {
      * 
      * @throws HttpException if refresh token is missing or invalid
      * @return array containing new access token
+     * @author Mathieu Chauvet
      */
     #[Route("POST", "/auth/refresh")]
     public function refresh() {
@@ -147,8 +156,10 @@ class Auth extends Controller {
             $tokens = $this->auth->refreshAccessToken($data['refresh_token']);
             return $tokens;
 
+        } catch (HttpException $e) {
+            throw new HttpException($e->getMessage(), $e->getHttpCode());
         } catch (\Exception $e) {
-            throw new HttpException($e->getMessage(), 401);
+            throw new HttpException($e->getMessage(), 500);
         }
     }
 }
