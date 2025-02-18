@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Controllers\Controller;
 use App\Models\AuthModel;
 use App\Utils\{Route, HttpException, JWT};
+use App\Middlewares\AuthMiddleware;
 
 class Auth extends Controller {
     protected object $auth;
@@ -67,18 +68,27 @@ class Auth extends Controller {
      * @return array containing success message
      * @author Mathieu Chauvet
      */
-    #[Route("POST", "/auth/logout", middlewares: [AuthMiddleware::class])]
+    #[Route("POST", "/auth/logout", middlewares: [AuthMiddleware::class], allowedRoles:['admin', 'manager'])]
     public function logout() {
         try {
             $data = $this->body;
             if (empty($data['refresh_token'])) {
                 throw new HttpException("Refresh token is required", 400);
             }
-
-            $jwt = JWT::decryptToken(getallheaders()['Authorization']);
-            $userId = $jwt['user_id'];
-
-            if ($this->auth->revokeToken($data['refresh_token'], $userId)) {
+    
+            $authHeader = getallheaders()['Authorization'];
+            if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+                throw new HttpException("Invalid Authorization header format", 401);
+            }
+    
+            $jwt = $matches[1];
+            $payload = JWT::decryptToken($jwt);
+            
+            if (!isset($payload['user_id'])) {
+                throw new HttpException("Invalid token payload", 401);
+            }
+    
+            if ($this->auth->revokeToken($data['refresh_token'], $payload['user_id'])) {
                 return ["message" => "Successfully logged out"];
             }
             
