@@ -105,16 +105,25 @@ class Auth extends Controller {
      * @return array containing success message
      * @author Mathieu Chauvet
      */
-    #[Route("POST", "/auth/logout/all", middlewares: [AuthMiddleware::class])]
+    #[Route("POST", "/auth/logout/all", middlewares: [AuthMiddleware::class], allowedRoles:['admin', 'manager'])]
     public function logoutAll() {
         try {
-            $jwt = JWT::decryptToken(getallheaders()['Authorization']);
-            $userId = $jwt['user_id'];
-
-            if ($this->auth->revokeAllTokens($userId)) {
+            $authHeader = getallheaders()['Authorization'];
+            if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+                throw new HttpException("Invalid Authorization header format", 401);
+            }
+    
+            $jwt = $matches[1];
+            $payload = JWT::decryptToken($jwt);
+            
+            if (!isset($payload['user_id'])) {
+                throw new HttpException("Invalid token payload", 401);
+            }
+    
+            if ($this->auth->revokeAllTokens($payload['user_id'])) {
                 return ["message" => "Successfully logged out from all sessions"];
             }
-
+    
             throw new HttpException("Failed to logout", 500);
         } catch (\Exception $e) {
             throw new HttpException($e->getMessage(), 400);
