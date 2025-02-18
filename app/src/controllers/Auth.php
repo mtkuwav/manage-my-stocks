@@ -135,6 +135,7 @@ class Auth extends Controller {
      * 
      * @throws HttpException if refresh token is missing or invalid
      * @return array containing new access token
+     * @author Mathieu Chauvet
      */
     #[Route("POST", "/auth/refresh")]
     public function refresh() {

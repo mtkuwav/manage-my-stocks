@@ -236,7 +236,6 @@ class AuthModel extends SqlConnect {
      * @author Mathieu Chauvet
      */
     public function refreshAccessToken(string $refreshToken) {
-        // Vérifier si le refresh token existe et est valide
         $query = "SELECT rt.*, u.role FROM refresh_tokens rt 
                 JOIN users u ON rt.user_id = u.id 
                 WHERE rt.token = :token 
@@ -251,7 +250,6 @@ class AuthModel extends SqlConnect {
             throw new HttpException("Invalid or expired refresh token", 401);
         }
 
-        // Générer un nouveau access token
         $accessToken = $this->generateJWT($tokenData['user_id'], $tokenData['role']);
 
         return [
