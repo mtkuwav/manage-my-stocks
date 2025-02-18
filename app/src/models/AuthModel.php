@@ -83,18 +83,7 @@ class AuthModel extends SqlConnect {
             $saltedPassword = $password . $this->passwordSalt;
             
             if (password_verify($saltedPassword, $user['password_hash'])) {
-
-                $existingToken = $this->getValidRefreshToken($user['id']);
-
-                if ($existingToken) {
-                    $accessToken = $this->generateJWT($user['id'], $user['role']);
-                    return [
-                        'access_token' => $accessToken,
-                        'refresh_token' => $existingToken['token'],
-                        'expires_in' => $this->accessTokenValidity
-                    ];
-                }
-
+                
                 $this->cleanupOldSessions($user['id']);
 
                 $accessToken = $this->generateJWT($user['id'], $user['role']);
