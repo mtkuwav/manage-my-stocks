@@ -226,4 +226,38 @@ class AuthModel extends SqlConnect {
         $req = $this->db->prepare($query);
         return $req->execute(['user_id' => $userId]);
     }
+
+    /**
+     * Generates a new access token using a valid refresh token.
+     *
+     * @param string $refreshToken The refresh token to validate
+     * @return array An array containing the new access token, expiration time, and token type
+     * @throws HttpException If the refresh token is invalid or expired
+     * @author Mathieu Chauvet
+     */
+    public function refreshAccessToken(string $refreshToken) {
+        // Vérifier si le refresh token existe et est valide
+        $query = "SELECT rt.*, u.role FROM refresh_tokens rt 
+                JOIN users u ON rt.user_id = u.id 
+                WHERE rt.token = :token 
+                AND rt.expires_at > NOW() 
+                AND rt.revoked = 0";
+
+        $req = $this->db->prepare($query);
+        $req->execute(['token' => $refreshToken]);
+        $tokenData = $req->fetch(PDO::FETCH_ASSOC);
+
+        if (!$tokenData) {
+            throw new HttpException("Invalid or expired refresh token", 401);
+        }
+
+        // Générer un nouveau access token
+        $accessToken = $this->generateJWT($tokenData['user_id'], $tokenData['role']);
+
+        return [
+            'access_token' => $accessToken,
+            'expires_in' => $this->accessTokenValidity,
+            'token_type' => 'Bearer'
+        ];
+    }
 }

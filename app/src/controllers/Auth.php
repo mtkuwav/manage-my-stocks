@@ -130,4 +130,25 @@ class Auth extends Controller {
         }
     }
 
+    /**
+     * Regenerate an access token using a valid refresh token
+     * 
+     * @throws HttpException if refresh token is missing or invalid
+     * @return array containing new access token
+     */
+    #[Route("POST", "/auth/refresh")]
+    public function refresh() {
+        try {
+            $data = $this->body;
+            if (empty($data['refresh_token'])) {
+                throw new HttpException("Refresh token is required", 400);
+            }
+
+            $tokens = $this->auth->refreshAccessToken($data['refresh_token']);
+            return $tokens;
+
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 401);
+        }
+    }
 }
