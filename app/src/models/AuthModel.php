@@ -36,16 +36,17 @@ class AuthModel extends SqlConnect {
         $hashedPassword = password_hash($saltedPassword, PASSWORD_BCRYPT);
 
         // Stock role into a variable to avoid making several requests for JWT token
-        $role = $data["role"] ?? 'manager';
+        $role = 'manager';
 
         // Create the user
-        $query_add = "INSERT INTO $this->tableUsers (username, email, password_hash, role) VALUES (:username, :email, :password_hash, :role)";
+        $query_add = "INSERT INTO $this->tableUsers (username, email, password_hash, role)
+                        VALUES (:username, :email, :password_hash, :role)";
         $req2 = $this->db->prepare($query_add);
         $req2->execute([
             "username" => $data["username"],
             "email" => $data["email"],
             "password_hash" => $hashedPassword,
-            "role" => $data["role"] ?? 'manager'
+            "role" => $role
         ]);
 
         $userId = $this->db->lastInsertId();
