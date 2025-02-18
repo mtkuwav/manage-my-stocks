@@ -791,3 +791,335 @@ class AuthModel extends SqlConnect {
 3. Si trop de sessions → révoque les plus anciennes
 
 Cette approche est plus sécurisée et plus efficace en termes de gestion des ressources.
+
+
+
+___
+___
+
+
+
+## Prompt :
+**Comment implémenter la révocation des token dans le code, si ce n'est pas déjà fait ?**
+
+## Réponse :
+La révocation des tokens est partiellement implémentée avec `cleanupOldSessions`, mais nous devrions ajouter une méthode explicite pour la déconnexion. Voici comment l'implémenter :
+
+1. **Dans AuthModel.php, ajouter la méthode de révocation** :
+
+```php
+/**
+ * Revokes a refresh token
+ * 
+ * @param string $refreshToken The refresh token to revoke
+ * @param int $userId The user ID for additional security
+ * @return bool True if token was revoked, false otherwise
+ * @author Mathieu Chauvet
+ */
+public function revokeToken($refreshToken, $userId) {
+    $query = "UPDATE $this->tableRefresh 
+              SET revoked = 1 
+              WHERE token = :token 
+              AND user_id = :user_id";
+
+    $req = $this->db->prepare($query);
+    return $req->execute([
+        'token' => $refreshToken,
+        'user_id' => $userId
+    ]);
+}
+
+/**
+ * Revokes all refresh tokens for a user
+ * 
+ * @param int $userId The user ID
+ * @return bool True if tokens were revoked, false otherwise
+ */
+public function revokeAllTokens($userId) {
+    $query = "UPDATE $this->tableRefresh 
+              SET revoked = 1 
+              WHERE user_id = :user_id 
+              AND revoked = 0";
+
+    $req = $this->db->prepare($query);
+    return $req->execute(['user_id' => $userId]);
+}
+```
+
+2. **Dans Auth.php, ajouter les routes de déconnexion** :
+
+```php
+/**
+ * Route pour la déconnexion simple (révoque un seul token)
+ */
+#[Route("POST", "/auth/logout", middlewares: [AuthMiddleware::class])]
+public function logout() {
+    try {
+        $data = $this->body;
+        if (empty($data['refresh_token'])) {
+            throw new HttpException("Refresh token is required", 400);
+        }
+
+        $jwt = JWT::decryptToken(getallheaders()['Authorization']);
+        $userId = $jwt['user_id'];
+
+        if ($this->auth->revokeToken($data['refresh_token'], $userId)) {
+            return ["message" => "Successfully logged out"];
+        }
+        
+        throw new HttpException("Failed to logout", 500);
+    } catch (\Exception $e) {
+        throw new HttpException($e->getMessage(), 400);
+    }
+}
+
+/**
+ * Route pour la déconnexion de toutes les sessions
+ */
+#[Route("POST", "/auth/logout/all", middlewares: [AuthMiddleware::class])]
+public function logoutAll() {
+    try {
+        $jwt = JWT::decryptToken(getallheaders()['Authorization']);
+        $userId = $jwt['user_id'];
+
+        if ($this->auth->revokeAllTokens($userId)) {
+            return ["message" => "Successfully logged out from all sessions"];
+        }
+
+        throw new HttpException("Failed to logout", 500);
+    } catch (\Exception $e) {
+        throw new HttpException($e->getMessage(), 400);
+    }
+}
+```
+
+3. **Utilisation** :
+
+```bash
+# Déconnexion d'une session
+curl -X POST http://localhost/auth/logout \
+     -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"refresh_token":"YOUR_REFRESH_TOKEN"}'
+
+# Déconnexion de toutes les sessions
+curl -X POST http://localhost/auth/logout/all \
+     -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+Cette implémentation permet :
+- ✅ Révocation d'un token spécifique
+- ✅ Révocation de tous les tokens d'un utilisateur
+- ✅ Vérification de l'appartenance du token à l'utilisateur
+- ✅ Gestion des erreurs
+- ✅ Middleware d'authentification pour la sécurité
+
+
+
+## Prompt :
+**Comment corriger le problème des refresh_token similaires lors des tentative de connexion ?**
+
+## Réponse :
+Pour corriger le problème des refresh_tokens similaires, il faut modifier la logique de `login` dans AuthModel.php. Le problème vient du fait qu'on réutilise systématiquement le token existant. Voici la correction :
+
+```php
+public function login($email, $password) {
+    $query = "SELECT * FROM $this->tableUsers WHERE email = :email";
+    $req = $this->db->prepare($query);
+    $req->execute(['email' => $email]);
+
+    $user = $req->fetch(PDO::FETCH_ASSOC);
+
+    if ($user) {
+        $saltedPassword = $password . $this->passwordSalt;
+        
+        if (password_verify($saltedPassword, $user['password_hash'])) {
+            // Nettoyer les anciennes sessions d'abord
+            $this->cleanupOldSessions($user['id']);
+
+            // Générer toujours un nouveau refresh token
+            $refreshToken = $this->generateRefreshToken($user['id']);
+            $accessToken = $this->generateJWT($user['id'], $user['role']);
+
+            return [
+                'access_token' => $accessToken,
+                'refresh_token' => $refreshToken,
+                'expires_in' => $this->accessTokenValidity,
+                'token_type' => 'Bearer'
+            ];
+        }
+    }
+
+    throw new \Exception("Invalid credentials.");
+}
+```
+
+Les changements clés sont :
+
+1. Suppression de la vérification des tokens existants
+2. Création systématique d'un nouveau refresh token
+3. Appel de `cleanupOldSessions` avant de créer un nouveau token
+
+Cette approche :
+- ✅ Assure un nouveau refresh token à chaque connexion
+- ✅ Maintient la limite de sessions actives via `cleanupOldSessions`
+- ✅ Améliore la sécurité en évitant la réutilisation des tokens
+- ✅ Simplifie la logique du code
+
+Pour tester :
+```bash
+for i in {1..6}; do
+    echo "Login attempt $i"
+    curl -X POST http://localhost/auth/login \
+         -H "Content-Type: application/json" \
+         -d '{"email":"admin@boutique.com","password":"adminmdp"}' | jq
+    sleep 1
+done
+```
+
+Les refresh tokens devraient maintenant être différents à chaque tentative de connexion.
+
+## Debug, Réponse :
+Le problème vient de la fonction `login` qui réutilise systématiquement un token existant via `getValidRefreshToken`. Voici la correction à apporter :
+
+```php
+public function login($email, $password) {
+    $query = "SELECT * FROM $this->tableUsers WHERE email = :email";
+    $req = $this->db->prepare($query);
+    $req->execute(['email' => $email]);
+
+    $user = $req->fetch(PDO::FETCH_ASSOC);
+
+    if ($user) {
+        $saltedPassword = $password . $this->passwordSalt;
+            
+        if (password_verify($saltedPassword, $user['password_hash'])) {
+            // Nettoyer d'abord les anciennes sessions
+            $this->cleanupOldSessions($user['id']);
+
+            // Toujours générer de nouveaux tokens
+            $accessToken = $this->generateJWT($user['id'], $user['role']);
+            $refreshToken = $this->generateRefreshToken($user['id']);
+            
+            return [
+                'access_token' => $accessToken,
+                'refresh_token' => $refreshToken,
+                'expires_in' => $this->accessTokenValidity,
+                'token_type' => 'Bearer'
+            ];
+        }
+    }
+
+    throw new \Exception("Invalid credentials.");
+}
+```
+
+Les changements clés :
+1. Suppression complète du bloc `$existingToken`
+2. Plus de réutilisation des tokens existants
+3. Génération systématique de nouveaux tokens
+4. `cleanupOldSessions` est toujours appelé pour maintenir la limite de 5 sessions
+
+Pour tester le changement :
+```bash
+for i in {1..6}; do
+    echo "Login attempt $i"
+    curl -X POST http://localhost/auth/login \
+         -H "Content-Type: application/json" \
+         -d '{"email":"admin@boutique.com","password":"adminmdp"}' | jq '.refresh_token'
+    sleep 1
+done
+```
+
+Maintenant, chaque login devrait générer un refresh_token unique, et `cleanupOldSessions` s'assurera de ne pas dépasser 5 sessions actives.
+
+
+
+## Prompt :
+**en utilisant des tokens venant d'etre créés avec login., j'ai une erreur 500 avec comme message invalid credentials. Est-ce du à une erreur de construction de la fonction logout dans Auth.php ou dans le code de AuthMiddleware ou AuthModel ?**
+
+## Réponse :
+Après analyse des fichiers, il semble y avoir un problème dans la façon dont le token est extrait dans la méthode `logout`. Voici les corrections nécessaires :
+
+1. Modifions d'abord AuthMiddleware.php pour extraire correctement le token :
+
+```php
+public function handle() {
+    $headers = getallheaders();
+    
+    if (!isset($headers['Authorization'])) {
+        error_log("Authorization header not set");
+        return $this->unauthorizedResponse();
+    }
+
+    $authHeader = $headers['Authorization'];
+    if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+        error_log("Bearer token not found in Authorization header");
+        return $this->unauthorizedResponse();
+    }
+
+    $jwt = $matches[1];  // Le token est dans $matches[1]
+
+    try {
+        $payload = JWT::decryptToken($jwt);
+        // ... reste du code ...
+```
+
+2. Dans Auth.php, modifions la méthode `logout` pour extraire correctement le token :
+
+```php
+public function logout() {
+    try {
+        $data = $this->body;
+        if (empty($data['refresh_token'])) {
+            throw new HttpException("Refresh token is required", 400);
+        }
+
+        $authHeader = getallheaders()['Authorization'];
+        if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+            throw new HttpException("Invalid Authorization header format", 401);
+        }
+
+        $jwt = $matches[1];
+        $payload = JWT::decryptToken($jwt);
+        
+        if (!isset($payload['user_id'])) {
+            throw new HttpException("Invalid token payload", 401);
+        }
+
+        if ($this->auth->revokeToken($data['refresh_token'], $payload['user_id'])) {
+            return ["message" => "Successfully logged out"];
+        }
+        
+        throw new HttpException("Failed to logout", 500);
+    } catch (\Exception $e) {
+        throw new HttpException($e->getMessage(), 400);
+    }
+}
+```
+
+3. Pour tester, utilisez cette séquence dans Postman :
+
+```http
+# 1. Login d'abord
+POST http://localhost/auth/login
+Content-Type: application/json
+
+{
+    "email": "admin@boutique.com",
+    "password": "adminmdp"
+}
+
+# 2. Copier le access_token et refresh_token de la réponse
+
+# 3. Logout ensuite
+POST http://localhost/auth/logout
+Authorization: Bearer eyJhbG... (access_token complet)
+Content-Type: application/json
+
+{
+    "refresh_token": "6038b5... (refresh_token complet)"
+}
+```
+
+Ces modifications devraient résoudre le problème d'extraction du token et de validation de la signature.
