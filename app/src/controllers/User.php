@@ -44,13 +44,13 @@ class User extends Controller {
                 throw new HttpException("Missing parameters for the update.", 400);
             }
 
-            # Check for missing fields
-            $missingFields = array_diff($this->user->authorized_fields_to_update, array_keys($data));
-            if (!empty($missingFields)) {
-                throw new HttpException("Missing fields: " . implode(", ", $missingFields), 400);
+            # Check for valid fields
+            $allowedFields = array_intersect_key($data, array_flip($this->user->authorized_fields_to_update));
+            if (empty($allowedFields)) {  // Changed from !empty to empty
+                throw new HttpException("No valid fields to update.", 400);
             }
 
-            $this->user->update($data, intval($id));
+            $this->user->update($allowedFields, intval($id));
 
             # Let's return the updated user
             return $this->user->get($id);
