@@ -4,6 +4,7 @@ namespace App\Models;
 
 use \PDO;
 use stdClass;
+use App\Utils\HttpException;
 
 class UserModel extends SqlConnect {
   private $table = "users";
@@ -69,5 +70,26 @@ class UserModel extends SqlConnect {
     $req->execute($params);
     
     return $this->get($id);
+  }
+
+  /**
+     * Promotes a user from manager role to admin role.
+     * 
+     * @param int $userId The ID of the user to promote
+     * @return array The updated user data
+     * @throws HttpException If promotion fails or user is already admin
+     * @author Mathieu Chauvet
+     */
+    public function promoteToAdmin(int $userId) {
+      $query = "UPDATE $this->table SET role = 'admin' 
+                WHERE id = :id AND role = 'manager'";
+      $req = $this->db->prepare($query);
+      $success = $req->execute(['id' => $userId]);
+  
+      if (!$success || $req->rowCount() === 0) {
+          throw new HttpException("Failed to promote user or user is already admin", 400);
+      }
+
+      return $this->get($userId);
   }
 }

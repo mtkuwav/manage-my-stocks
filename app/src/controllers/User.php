@@ -58,4 +58,16 @@ class User extends Controller {
       throw $e;
     }
   }
+
+  #[Route("POST", "/users/:id/promote", middlewares: [AuthMiddleware::class], allowedRoles: ['admin'])]
+  public function promoteUser() {
+    try {
+        $id = intval($this->params['id']);
+        return $this->user->promoteToAdmin($id);
+    } catch (HttpException $e) {
+        throw $e;
+    } catch (\Exception $e) {
+        throw new HttpException($e->getMessage(), 500);
+    }
+  }
 }
