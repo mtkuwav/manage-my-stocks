@@ -9,6 +9,7 @@ use App\Utils\HttpException;
 class UserModel extends SqlConnect {
   private $table = "users";
   public $authorized_fields_to_update = ['username', 'email', 'role'];
+  private string $passwordSalt = 'sqidq7sà';
 
   /**
    * Deletes a user by their ID.
@@ -126,5 +127,32 @@ class UserModel extends SqlConnect {
       }
 
       return $this->get($userId);
+  }
+
+  /**
+     * Updates the password of a user.
+     *
+     * @param int $userId The ID of the user whose password is to be updated.
+     * @param string $newPassword The new password.
+     * @return bool True if the password was updated successfully, false otherwise.
+     * @throws HttpException If the update fails.
+     * @author Mathieu Chauvet
+     */
+    public function updatePassword(int $userId, string $newPassword) {
+      $saltedPassword = $newPassword . $this->passwordSalt;
+      $hashedPassword = password_hash($saltedPassword, PASSWORD_BCRYPT);
+
+      $query = "UPDATE $this->table SET password_hash = :password_hash WHERE id = :id";
+      $req = $this->db->prepare($query);
+      $success = $req->execute([
+          'password_hash' => $hashedPassword,
+          'id' => $userId
+      ]);
+
+      if (!$success) {
+          throw new HttpException("Failed to update password", 500);
+      }
+
+      return true;
   }
 }
