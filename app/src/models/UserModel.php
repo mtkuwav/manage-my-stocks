@@ -7,7 +7,8 @@ use stdClass;
 use App\Utils\HttpException;
 
 class UserModel extends SqlConnect {
-    private $table = "users";
+    private string $userTable = 'users';
+    private string $refreshTokenTable = 'refresh_tokens';
     public $authorized_fields_to_update = ['username', 'email', 'role'];
     private string $passwordSalt = 'sqidq7sà';
 
@@ -15,27 +16,49 @@ class UserModel extends SqlConnect {
      * Deletes a user by their ID.
      * 
      * @param int $id The ID of the user to delete
-     * @return stdClass An empty object
-     * @author Rémis Rubis
+     * @return array An associative array containing a success message
+     * @author Rémis Rubis, Mathieu Chauvet
      */
     public function delete(int $id) {
-        $req = $this->db->prepare("DELETE FROM $this->table WHERE id = :id");
-        $req->execute(["id" => $id]);
-        return new stdClass();
+        $user = $this->get($id);
+        if (empty((array)$user)) {
+            throw new HttpException("User not found", 404);
+        }
+
+        $tokenReq = $this->db->prepare("DELETE FROM $this->refreshTokenTable WHERE user_id = :id");
+        $tokenReq->execute(["id" => $id]);
+
+        $userReq = $this->db->prepare("DELETE FROM $this->userTable WHERE id = :id");
+        $success = $userReq->execute(["id" => $id]);
+
+        if (!$success) {
+            throw new HttpException("Failed to delete user", 500);
+        }
+
+        return ["message" => "User successfully deleted"];
     }
 
     /**
      * Retrieves a user by their ID.
      * 
      * @param int $id The ID of the user to retrieve
-     * @return array|stdClass The user data as an associative array, or an empty object if the user is not found
-     * @author Rémis Rubis
+     * @return array The user data as an associative array
+     * @author Rémis Rubis, Mathieu Chauvet
      */
     public function get(int $id) {
+        if ($id <= 0) {
+            throw new HttpException("Invalid user ID", 400);
+        }
+    
         $req = $this->db->prepare("SELECT * FROM users WHERE id = :id");
         $req->execute(["id" => $id]);
-
-        return $req->rowCount() > 0 ? $req->fetch(PDO::FETCH_ASSOC) : new stdClass();
+    
+        $user = $req->fetch(PDO::FETCH_ASSOC);
+        if (!$user) {
+            throw new HttpException("User not found", 404);
+        }
+    
+        return $user;
     }
 
     /**
@@ -43,25 +66,32 @@ class UserModel extends SqlConnect {
      * 
      * @param int|null $limit The maximum number of users to retrieve (optional)
      * @return array An array of user data as associative arrays
-     * @author Rémis Rubis
+     * @author Rémis Rubis, Mathieu Chauvet
      */
     public function getAll(?int $limit = null) {
-        $query = "SELECT * FROM {$this->table}";
-        
-        if ($limit !== null) {
-            $query .= " LIMIT :limit";
-            $params = [':limit' => (int)$limit];
-        } else {
-            $params = [];
+        try {
+            $query = "SELECT * FROM {$this->userTable}";
+            
+            if ($limit !== null) {
+                if ($limit <= 0) {
+                    throw new HttpException("Limit must be a positive number", 400);
+                }
+                $query .= " LIMIT :limit";
+                $params = [':limit' => (int)$limit];
+            } else {
+                $params = [];
+            }
+            
+            $req = $this->db->prepare($query);
+            foreach ($params as $key => $value) {
+                $req->bindValue($key, $value, PDO::PARAM_INT);
+            }
+            $req->execute();
+            
+            return $req->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\PDOException $e) {
+            throw new HttpException("Database error: " . $e->getMessage(), 500);
         }
-        
-        $req = $this->db->prepare($query);
-        foreach ($params as $key => $value) {
-            $req->bindValue($key, $value, PDO::PARAM_INT);
-        }
-        $req->execute();
-        
-        return $req->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
@@ -71,7 +101,7 @@ class UserModel extends SqlConnect {
      * @author Rémis Rubis
      */
     public function getLast() {
-        $req = $this->db->prepare("SELECT * FROM $this->table ORDER BY id DESC LIMIT 1");
+        $req = $this->db->prepare("SELECT * FROM $this->userTable ORDER BY id DESC LIMIT 1");
         $req->execute();
 
         return $req->rowCount() > 0 ? $req->fetch(PDO::FETCH_ASSOC) : new stdClass();
@@ -87,7 +117,7 @@ class UserModel extends SqlConnect {
      * @author Rémis Rubis, Mathieu Chauvet
      */
     public function update(array $data, int $id) {
-        $request = "UPDATE $this->table SET ";
+        $request = "UPDATE $this->userTable SET ";
         $params = [];
         $fields = [];
 
@@ -126,7 +156,7 @@ class UserModel extends SqlConnect {
      * @author Mathieu Chauvet
      */
     public function promoteToAdmin(int $userId) {
-        $query = "UPDATE $this->table SET role = 'admin' 
+        $query = "UPDATE $this->userTable SET role = 'admin' 
                             WHERE id = :id AND role = 'manager'";
         $req = $this->db->prepare($query);
         $success = $req->execute(['id' => $userId]);
@@ -151,7 +181,7 @@ class UserModel extends SqlConnect {
         $saltedPassword = $newPassword . $this->passwordSalt;
         $hashedPassword = password_hash($saltedPassword, PASSWORD_BCRYPT);
 
-        $query = "UPDATE $this->table SET password_hash = :password_hash WHERE id = :id";
+        $query = "UPDATE $this->userTable SET password_hash = :password_hash WHERE id = :id";
         $req = $this->db->prepare($query);
         $success = $req->execute([
             'password_hash' => $hashedPassword,

@@ -22,11 +22,23 @@ class User extends Controller {
      *
      * @return array The deletion result
      * @throws HttpException if deletion fails
-     * @author Rémis Rubis
+     * @author Rémis Rubis, Mathieu Chauvet
      */
     #[Route("DELETE", "/users/:id", middlewares: [AuthMiddleware::class], allowedRoles:['admin'])]
     public function deleteUser() {
-        return $this->user->delete(intval($this->params['id']));
+        try {
+            $id = intval($this->params['id']);
+
+            if (!$this->user->get($id)) {
+                throw new HttpException("User not found", 404);
+            }
+
+            return $this->user->delete($id);
+        } catch (HttpException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 500);
+        }
     }
 
     /**
@@ -34,11 +46,24 @@ class User extends Controller {
      *
      * @return array The user data
      * @throws HttpException if user not found
-     * @author Rémis Rubis
+     * @author Rémis Rubis, Mathieu Chauvet
      */
     #[Route("GET", "/users/:id", middlewares: [AuthMiddleware::class], allowedRoles:['admin'])] 
     public function getUser() {
-        return $this->user->get(intval($this->params['id']));
+        try {
+            $id = intval($this->params['id']);
+            $user = $this->user->get($id);
+            
+            if (empty($user)) {
+                throw new HttpException("User not found", 404);
+            }
+            
+            return $user;
+        } catch (HttpException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 500);
+        }
     }
 
     /**
@@ -46,12 +71,29 @@ class User extends Controller {
      * 
      * @param int|null $limit Optional parameter to limit the number of returned users
      * @return array Array of user records
-     * @author Rémis Rubis
+     * @author Rémis Rubis, Mathieu Chauvet
      */
     #[Route("GET", "/users", middlewares: [AuthMiddleware::class], allowedRoles:['admin'])]
     public function getUsers() {
+        try {
             $limit = isset($this->params['limit']) ? intval($this->params['limit']) : null;
-            return $this->user->getAll($limit);
+
+            if ($limit !== null && $limit <= 0) {
+                throw new HttpException("Limit must be a positive number", 400);
+            }
+
+            $users = $this->user->getAll($limit);
+
+            if (empty($users)) {
+                return [];
+            }
+
+            return $users;
+        } catch (HttpException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 500);
+        }
     }
 
     /**
@@ -84,6 +126,8 @@ class User extends Controller {
             return $this->user->get($id);
         } catch (HttpException $e) {
             throw $e;
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 500);
         }
     }
 
