@@ -10,13 +10,26 @@ class UserModel extends SqlConnect {
   private $table = "users";
   public $authorized_fields_to_update = ['username', 'email', 'role'];
 
-
+  /**
+   * Deletes a user by their ID.
+   * 
+   * @param int $id The ID of the user to delete
+   * @return stdClass An empty object
+   * @author Rémis Rubis
+   */
   public function delete(int $id) {
     $req = $this->db->prepare("DELETE FROM $this->table WHERE id = :id");
     $req->execute(["id" => $id]);
     return new stdClass();
   }
 
+  /**
+   * Retrieves a user by their ID.
+   * 
+   * @param int $id The ID of the user to retrieve
+   * @return array|stdClass The user data as an associative array, or an empty object if the user is not found
+   * @author Rémis Rubis
+   */
   public function get(int $id) {
     $req = $this->db->prepare("SELECT * FROM users WHERE id = :id");
     $req->execute(["id" => $id]);
@@ -24,6 +37,13 @@ class UserModel extends SqlConnect {
     return $req->rowCount() > 0 ? $req->fetch(PDO::FETCH_ASSOC) : new stdClass();
   }
 
+  /**
+   * Retrieves all users, optionally limited by a specified number.
+   * 
+   * @param int|null $limit The maximum number of users to retrieve (optional)
+   * @return array An array of user data as associative arrays
+   * @author Rémis Rubis
+   */
   public function getAll(?int $limit = null) {
     $query = "SELECT * FROM {$this->table}";
     
@@ -43,6 +63,12 @@ class UserModel extends SqlConnect {
     return $req->fetchAll(PDO::FETCH_ASSOC);
   }
 
+  /**
+   * Retrieves the most recently added user.
+   * 
+   * @return array|stdClass The user data as an associative array, or an empty object if no users are found
+   * @author Rémis Rubis
+   */
   public function getLast() {
     $req = $this->db->prepare("SELECT * FROM $this->table ORDER BY id DESC LIMIT 1");
     $req->execute();
@@ -50,6 +76,15 @@ class UserModel extends SqlConnect {
     return $req->rowCount() > 0 ? $req->fetch(PDO::FETCH_ASSOC) : new stdClass();
   }
 
+  /**
+   * Updates a user's information.
+   * 
+   * @param array $data The data to update, as an associative array
+   * @param int $id The ID of the user to update
+   * @return array|stdClass The updated user data as an associative array, or an empty object if the user is not found
+   * @throws HttpException If no fields are provided for update or if the update fails
+   * @author Rémis Rubis
+   */
   public function update(array $data, int $id) {
     $request = "UPDATE $this->table SET ";
     $params = [];
