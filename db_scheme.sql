@@ -162,3 +162,15 @@ CREATE TABLE IF NOT EXISTS `refresh_tokens` (
     FOREIGN KEY (`user_id`)
     REFERENCES `users` (`id`)
 );
+
+-- --------------------------------------------------------
+-- Initial admin user
+-- Password: adminmdp (hashed with PASSWORD_BCRYPT and salt 'sqidq7sà')
+-- --------------------------------------------------------
+INSERT INTO `users` (`username`, `email`, `password_hash`, `role`) 
+VALUES (
+    'admin',
+    'admin@boutique.com',
+    '$2y$10$fV3K74l/sZhS11cKKKbNJO0nRJltaVrygPpUuLvENKAEMcIz1J6me',
+    'admin'
+) ON DUPLICATE KEY UPDATE `id` = `id`;
