@@ -8,10 +8,38 @@
    - [Logout](#logout)
    - [Logout All Sessions](#logout-all-sessions)
 2. [Users](#users)
+   - [Promote User to Admin](#promote-a-manager-user-to-admin-role)
+   - [Get User Profile](#get-user-profile-with-its-id)
+   - [Get All Users](#get-all-users-profile-with-optional-limit)
+   - [Update User](#update-user)
+   - [Update Password](#update-user-password)
+   - [Delete User](#delete-user)
+
 3. [Products](#products)
+   - [Create Product](#create-product)
+   - [Update Product](#update-product)
+   - [Get Product](#get-product)
+   - [List Products](#list-products)
+   - [Delete Product](#delete-product)
+
 4. [Categories](#categories)
+   - [Create Category](#create-category)
+   - [Update Category](#update-category)
+   - [Get Category](#get-category)
+   - [List Categories](#list-categories)
+   - [Delete Category](#delete-category)
+
 5. [Error Handling](#error-handling)
-6. [Authentication Flow](#authentication-flow)
+   - [Error Responses](#error-responses)
+
+6. [Security Information](#security-information)
+   - [Token Security](#token-security)
+
+## **IMPORTANT NOTE**
+At first, the database will only contain one admin user so that this user can promote other newly registered users to admin role. This is made so for security reasons so that no user can register as an admin. Here are their credenials, **DO NOT FORGET TO UPDATE THEM OR DELETE THIS USER AFTERWARDS.**
+
+**email**: ``admin@boutique.com`` <br>
+**password**: ``adminpswd``
 
 ## Authentication
 
@@ -216,6 +244,31 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
     },
     // etc.
 ]
+```
+
+### Update User
+- **Route**: `PATCH /users/:id`
+- **Access**: Private (Admin users)
+- **Description**: Update user information (username and/or email)
+
+**Request**:
+```json
+{
+    "username": "Updated Username",
+    "email": "updated.email@example.com"
+}
+```
+
+**Response**:
+```json
+{
+    "id": 1,
+    "username": "Updated Username",
+    "email": "updated.email@example.com",
+    "role": "manager",
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+}
 ```
 
 ### Update User Password
