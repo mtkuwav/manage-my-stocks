@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Models\{SqlConnect, InventoryLogModel};
-use App\Utils\HttpException;
+use App\Utils\{HttpException, JWT};
 use App\Traits\StockManagementTrait;
 use \stdClass;
 use \PDO;
@@ -100,10 +100,16 @@ class ProductModel extends SqlConnect {
 
             $productId = $this->db->lastInsertId();
 
-            // Log inventory change
+            // Get user_id from JWT token
+            $token = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+            $token = str_replace('Bearer ', '', $token);
+            $payload = JWT::decryptToken($token);
+            $userId = $payload['user_id'] ?? null;
+
+            // Log inventory change with user_id
             $this->inventoryLog->logChange(
                 $productId,
-                null,
+                $userId,  // Ajout de l'user_id
                 0,
                 $data['quantity_in_stock'],
                 'initial'

@@ -49,7 +49,7 @@ class InventoryLogModel extends SqlConnect {
      * @param string $changeType Type of change (adjustment|sale|return|restock)
      * @throws HttpException If the log entry could not be created
      * @return bool True if log was created successfully
-     * @author Mathieu Chauvet
+     * @author Mathieu Chauvet 
      */
     public function logChange(
         int $productId,
@@ -59,6 +59,11 @@ class InventoryLogModel extends SqlConnect {
         string $changeType
     ): bool {
         $this->validateChangeType($changeType);
+
+        // Validate user_id if provided
+        if ($userId !== null && $userId <= 0) {
+            throw new HttpException("Invalid user ID", 400);
+        }
 
         try {
             $query = "INSERT INTO {$this->table} 
