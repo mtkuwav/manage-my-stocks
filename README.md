@@ -8,8 +8,8 @@ This API provides a comprehensive solution for small business owners to manage t
 
 - 🔐 JWT Authentication
 - 📦 Complete Product Management (CRUD)
-<!-- - 📋 Order Processing System -->
 - 🗂️ Stock Level Tracking
+<!-- - 📋 Order Processing System -->
 <!-- - 🚚 Delivery Management
 - ↩️ Returns Processing -->
 
@@ -45,6 +45,12 @@ cd app && composer install && cd ../
 docker-compose up -d
 ```
 
+4. (Optional) If you want to populate the database, execute this PHP script :
+```sh
+php app/src/scripts/populate_db.php
+```
+This will do it automatically for you.
+
 ## API Endpoints
 
 ### Authentication
@@ -68,6 +74,8 @@ docker-compose up -d
 - GET `/api/stock/{product_id}` - Check stock level
 - PUT `/api/stock/{product_id}` - Update stock level
 
+**For a more precise documentation, check [this](./DOCUMENTATION.md).** 
+
 ## Development Access
 
 - API Base URL: [http://localhost/api](http://localhost/api)
@@ -86,9 +94,7 @@ Authorization: Bearer <your_jwt_token>
 The API uses standard HTTP status codes and returns JSON responses:
 ```json
 {
-    "status": "error",
-    "message": "Error description",
-    "code": 400
+    "message": "Error description"
 }
 ```
 
