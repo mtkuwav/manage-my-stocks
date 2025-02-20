@@ -14,7 +14,7 @@ class ProductModel extends SqlConnect {
     private InventoryLogModel $inventoryLog;
     
     private string $tableProducts = "products";
-    public $authorized_fields_to_update = ['name', 'description', 'price', 'quantity_in_stocks'];
+    public $authorized_fields_to_update = ['name', 'description', 'price', 'quantity_in_stock'];
 
     public function __construct() {
         parent::__construct();
@@ -153,23 +153,31 @@ class ProductModel extends SqlConnect {
      * @author Mathieu Chauvet
      */
     public function getById(int $id) {
-        if ($id <= 0) {
-            throw new HttpException("Invalid product ID", 400);
+        try {
+            if ($id <= 0) {
+                throw new HttpException("Invalid product ID", 400);
+            }
+        
+            $req = $this->db->prepare("SELECT * FROM $this->tableProducts WHERE id = :id");
+            $req->execute(["id" => $id]);
+        
+            $product = $req->fetch(PDO::FETCH_ASSOC);
+            if (!$product) {
+                throw new HttpException("Product not found", 404);
+            }
+        
+            return $product;
+        } catch (HttpException $e) {
+            throw $e;
+        } catch (\PDOException $e) {
+            throw new HttpException("Database error: " . $e->getMessage(), 500);
+        } catch (\Exception $e) {
+            throw new HttpException("Unexpected error: " . $e->getMessage(), 500);
         }
-    
-        $req = $this->db->prepare("SELECT * FROM $this->tableProducts WHERE id = :id");
-        $req->execute(["id" => $id]);
-    
-        $product = $req->fetch(PDO::FETCH_ASSOC);
-        if (!$product) {
-            throw new HttpException("Product not found", 404);
-        }
-    
-        return $product;
     }
 
     /**
-     * Retrieves all categories, optionally limited by a specified number.
+     * Retrieves all products, optionally limited by a specified number.
      * 
      * @param int|null $limit The maximum number of categories to retrieve (optional)
      * @return array An array of product data as associative arrays
@@ -234,39 +242,72 @@ class ProductModel extends SqlConnect {
      * @author Mathieu Chauvet
      */
     public function update(array $data, int $id) {
-        $request = "UPDATE $this->tableProducts SET ";
-        $params = [];
-        $fields = [];
-
-        # Prepare the query dynamically based on the provided data
-        foreach ($data as $key => $value) {
-            if (in_array($key, $this->authorized_fields_to_update)) {
-                $fields[] = "$key = :$key";
-                $params[":$key"] = $value;
+        try {
+            // Vérifier si le produit existe AVANT la transaction
+            $currentProduct = $this->getById($id);
+            
+            // Préparer toutes les données AVANT la transaction
+            $fields = [];
+            $params = [];
+            foreach ($data as $key => $value) {
+                if (in_array($key, $this->authorized_fields_to_update)) {
+                    $fields[] = "$key = :$key";
+                    $params[":$key"] = $value;
+                }
             }
+
+            if (empty($fields)) {
+                throw new HttpException(
+                    "No valid fields to update. Allowed fields: " . implode(", ", $this->authorized_fields_to_update), 
+                    400
+                );
+            }
+
+            // Toutes les validations AVANT la transaction
+            if (isset($data['name']) && empty(trim($data['name']))) {
+                throw new HttpException("Product name cannot be empty", 400);
+            }
+
+            if (isset($data['quantity_in_stock'])) {
+                $this->validateStock($data['quantity_in_stock']);
+            }
+
+            // Début de la transaction optimisée
+            $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+            try {
+                // Mise à jour du produit
+                $query = "UPDATE $this->tableProducts SET " . implode(", ", $fields) . " WHERE id = :id";
+                $params[':id'] = $id;
+                
+                $stmt = $this->db->prepare($query);
+                $stmt->execute($params);
+
+                // Log de l'inventaire si nécessaire
+                if (isset($data['quantity_in_stock']) && $data['quantity_in_stock'] != $currentProduct['quantity_in_stock']) {
+                    $token = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+                    $token = str_replace('Bearer ', '', $token);
+                    $payload = JWT::decryptToken($token);
+                    
+                    $this->inventoryLog->logChange(
+                        $id,
+                        $payload['user_id'] ?? null,
+                        $currentProduct['quantity_in_stock'],
+                        $data['quantity_in_stock'],
+                        'adjustment'
+                    );
+                }
+
+                return $this->getById($id);
+
+            } catch (\Exception $e) {
+                throw $e;
+            }
+        } catch (HttpException $e) {
+            throw $e;
+        } catch (\PDOException $e) {
+            throw new HttpException("Database error: " . $e->getMessage(), 500);
         }
-
-        # Validate name if present
-        if (isset($data['name']) && empty(trim($data['name']))) {
-            throw new HttpException("Product name cannot be empty", 400);
-        }
-
-        # Check if there are any valid fields to update
-        if (empty($fields)) {
-            throw new HttpException("No valid fields to update. Allowed fields: " . implode(", ", $this->authorized_fields_to_update), 400);
-        }
-
-        $params[':id'] = $id;
-        $query = $request . implode(", ", $fields) . " WHERE id = :id";
-
-        $req = $this->db->prepare($query);
-        $success = $req->execute($params);
-
-        if (!$success) {
-            throw new HttpException("Failed to update product", 500);
-        }
-
-        return $this->getById($id);
     }
 
 
