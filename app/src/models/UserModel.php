@@ -12,31 +12,10 @@ class UserModel extends SqlConnect {
     public $authorized_fields_to_update = ['username', 'email', 'role'];
     private string $passwordSalt = 'sqidq7sà';
 
-    /**
-     * Deletes a user by their ID.
-     * 
-     * @param int $id The ID of the user to delete
-     * @return array An associative array containing a success message
-     * @author Rémis Rubis, Mathieu Chauvet
-     */
-    public function delete(int $id) {
-        $user = $this->get($id);
-        if (empty((array)$user)) {
-            throw new HttpException("User not found", 404);
-        }
 
-        $tokenReq = $this->db->prepare("DELETE FROM $this->refreshTokenTable WHERE user_id = :id");
-        $tokenReq->execute(["id" => $id]);
-
-        $userReq = $this->db->prepare("DELETE FROM $this->userTable WHERE id = :id");
-        $success = $userReq->execute(["id" => $id]);
-
-        if (!$success) {
-            throw new HttpException("Failed to delete user", 500);
-        }
-
-        return ["message" => "User successfully deleted"];
-    }
+    // ┌────────────────────────────────┐
+    // | -------- READ METHODS -------- |
+    // └────────────────────────────────┘
 
     /**
      * Retrieves a user by their ID.
@@ -107,6 +86,11 @@ class UserModel extends SqlConnect {
         return $req->rowCount() > 0 ? $req->fetch(PDO::FETCH_ASSOC) : new stdClass();
     }
 
+
+    // ┌──────────────────────────────────┐
+    // | -------- UPDATE METHODS -------- |
+    // └──────────────────────────────────┘
+
     /**
      * Updates a user's information.
      * 
@@ -148,27 +132,6 @@ class UserModel extends SqlConnect {
     }
 
     /**
-     * Promotes a user from manager role to admin role.
-     * 
-     * @param int $userId The ID of the user to promote
-     * @return array The updated user data
-     * @throws HttpException If promotion fails or user is already admin
-     * @author Mathieu Chauvet
-     */
-    public function promoteToAdmin(int $userId) {
-        $query = "UPDATE $this->userTable SET role = 'admin' 
-                            WHERE id = :id AND role = 'manager'";
-        $req = $this->db->prepare($query);
-        $success = $req->execute(['id' => $userId]);
-
-        if (!$success || $req->rowCount() === 0) {
-                throw new HttpException("Failed to promote user or user is already admin", 400);
-        }
-
-        return $this->get($userId);
-    }
-
-    /**
      * Updates the password of a user.
      *
      * @param int $userId The ID of the user whose password is to be updated.
@@ -193,5 +156,57 @@ class UserModel extends SqlConnect {
         }
 
         return true;
+    }
+
+    /**
+     * Promotes a user from manager role to admin role.
+     * 
+     * @param int $userId The ID of the user to promote
+     * @return array The updated user data
+     * @throws HttpException If promotion fails or user is already admin
+     * @author Mathieu Chauvet
+     */
+    public function promoteToAdmin(int $userId) {
+        $query = "UPDATE $this->userTable SET role = 'admin' 
+                            WHERE id = :id AND role = 'manager'";
+        $req = $this->db->prepare($query);
+        $success = $req->execute(['id' => $userId]);
+
+        if (!$success || $req->rowCount() === 0) {
+                throw new HttpException("Failed to promote user or user is already admin", 400);
+        }
+
+        return $this->get($userId);
+    }
+
+
+    // ┌──────────────────────────────────┐
+    // | -------- DELETE METHODS -------- |
+    // └──────────────────────────────────┘
+
+    /**
+     * Deletes a user by their ID.
+     * 
+     * @param int $id The ID of the user to delete
+     * @return array An associative array containing a success message
+     * @author Mathieu Chauvet
+     */
+    public function delete(int $id) {
+        $user = $this->get($id);
+        if (empty((array)$user)) {
+            throw new HttpException("User not found", 404);
+        }
+
+        $tokenReq = $this->db->prepare("DELETE FROM $this->refreshTokenTable WHERE user_id = :id");
+        $tokenReq->execute(["id" => $id]);
+
+        $userReq = $this->db->prepare("DELETE FROM $this->userTable WHERE id = :id");
+        $success = $userReq->execute(["id" => $id]);
+
+        if (!$success) {
+            throw new HttpException("Failed to delete user", 500);
+        }
+
+        return ["message" => "User successfully deleted"];
     }
 }

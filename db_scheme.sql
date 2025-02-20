@@ -15,6 +15,18 @@ CREATE TABLE IF NOT EXISTS `users` (
 );
 
 -- --------------------------------------------------------
+-- `categories` table to order products
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `categories` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(50) NOT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `name_UNIQUE` (`name` ASC)
+);
+
+-- --------------------------------------------------------
 -- `products` table for stocks management
 -- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `products` (
@@ -28,19 +40,12 @@ CREATE TABLE IF NOT EXISTS `products` (
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE INDEX `sku_UNIQUE` (`sku` ASC)
-);
-
--- --------------------------------------------------------
--- `categories` table to order products
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `categories` (
-  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(50) NOT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE INDEX `name_UNIQUE` (`name` ASC)
+  UNIQUE INDEX `sku_UNIQUE` (`sku` ASC),
+  CONSTRAINT `fk_products_categories`
+    FOREIGN KEY (`category_id`)
+    REFERENCES `categories` (`id`)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
 );
 
 -- --------------------------------------------------------
@@ -133,14 +138,15 @@ CREATE TABLE IF NOT EXISTS `inventory_logs` (
   `user_id` INT UNSIGNED NULL,
   `old_quantity` INT NOT NULL,
   `new_quantity` INT NOT NULL,
-  `change_type` ENUM('sale', 'return', 'adjustment', 'restock') NOT NULL,
+  `change_type` ENUM('sale', 'return', 'adjustment', 'restock', 'initial', 'deletion') NOT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   INDEX `fk_inventory_logs_products_idx` (`product_id` ASC),
   INDEX `fk_inventory_logs_users_idx` (`user_id` ASC),
   CONSTRAINT `fk_inventory_logs_products`
     FOREIGN KEY (`product_id`)
-    REFERENCES `products` (`id`),
+    REFERENCES `products` (`id`)
+    ON DELETE CASCADE,
   CONSTRAINT `fk_inventory_logs_users`
     FOREIGN KEY (`user_id`)
     REFERENCES `users` (`id`)

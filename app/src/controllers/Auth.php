@@ -15,6 +15,11 @@ class Auth extends Controller {
         parent::__construct($params);
     }
 
+
+    // ┌──────────────────────────────────┐
+    // | -------- CREATE METHODS -------- |
+    // └──────────────────────────────────┘
+
     /**
      * Register a new user with email, password and username
      * 
@@ -39,6 +44,10 @@ class Auth extends Controller {
         }
     }
 
+
+    // ┌────────────────────────────────┐
+    // | -------- AUTH METHODS -------- |
+    // └────────────────────────────────┘
 
     /**
      * Authenticate a user and generate access and refresh tokens
@@ -72,7 +81,7 @@ class Auth extends Controller {
      * @return array containing success message
      * @author Mathieu Chauvet
      */
-    #[Route("POST", "/auth/logout", middlewares: [AuthMiddleware::class], allowedRoles:['admin', 'manager'])]
+    #[Route("DELETE", "/auth/logout", middlewares: [AuthMiddleware::class], allowedRoles:['admin', 'manager'])]
     public function logout() {
         try {
             $data = $this->body;
@@ -111,7 +120,7 @@ class Auth extends Controller {
      * @return array containing success message
      * @author Mathieu Chauvet
      */
-    #[Route("POST", "/auth/logout/all", middlewares: [AuthMiddleware::class], allowedRoles:['admin', 'manager'])]
+    #[Route("DELETE", "/auth/logout/all", middlewares: [AuthMiddleware::class], allowedRoles:['admin', 'manager'])]
     public function logoutAll() {
         try {
             $authHeader = getallheaders()['Authorization'];
@@ -145,7 +154,7 @@ class Auth extends Controller {
      * @return array containing new access token
      * @author Mathieu Chauvet
      */
-    #[Route("POST", "/auth/refresh")]
+    #[Route("PUT", "/auth/refresh")]
     public function refresh() {
         try {
             $data = $this->body;

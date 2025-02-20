@@ -11,7 +11,8 @@
       "App\\Controllers\\": "src/controllers/",
       "App\\Models\\": "src/models/",
       "App\\Utils\\": "src/utils/",
-      "App\\Middlewares\\": "src/middlewares"
+      "App\\Middlewares\\": "src/middlewares",
+      "App\\Traits\\": "src/traits/"
     }
   }
 }
