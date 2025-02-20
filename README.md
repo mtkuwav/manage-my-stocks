@@ -94,9 +94,7 @@ Authorization: Bearer <your_jwt_token>
 The API uses standard HTTP status codes and returns JSON responses:
 ```json
 {
-    "status": "error",
-    "message": "Error description",
-    "code": 400
+    "message": "Error description"
 }
 ```
 
