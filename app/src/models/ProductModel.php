@@ -53,6 +53,22 @@ class ProductModel extends SqlConnect {
                 throw new HttpException("Category not found", 404);
             }
 
+            // Check for duplicate product name in the same category
+            $duplicateCheck = $this->db->prepare(
+                "SELECT id FROM $this->tableProducts 
+                WHERE LOWER(name) = LOWER(:name) 
+                AND category_id = :category_id"
+            );
+            $duplicateCheck->execute([
+                "name" => $data["name"],
+                "category_id" => $data["category_id"]
+            ]);
+
+            if ($duplicateCheck->rowCount() > 0) {
+                throw new HttpException(
+                    "A product with this name already exists in this category ! You may want to increase stock ?", 400);
+            }
+
             // Prepare all data before transaction
             $categoryPrefix = substr(strtoupper($category['name']), 0, 4);
             $data['sku'] = $this->generateSKU($categoryPrefix, $data['name']);
