@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS `inventory_logs` (
   `user_id` INT UNSIGNED NULL,
   `old_quantity` INT NOT NULL,
   `new_quantity` INT NOT NULL,
-  `change_type` ENUM('sale', 'return', 'adjustment', 'restock') NOT NULL,
+  `change_type` ENUM('sale', 'return', 'adjustment', 'restock', 'initial') NOT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   INDEX `fk_inventory_logs_products_idx` (`product_id` ASC),

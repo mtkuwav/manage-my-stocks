@@ -1458,3 +1458,166 @@ class Auth extends Controller {
 ```
 
 Ces modifications devraient permettre de propager correctement les codes d'erreur HTTP et d'éviter les erreurs 500 non désirées.
+
+
+
+___
+___
+
+
+
+## Prompt : 
+**Y'aura t il besoin d'apporter d'autres changements dans la codebase pour finaliser la méthode createProduct, comme par exemple créer un modèle pour inventory logs ?**
+
+## Réponse :
+Oui, pour une implémentation complète et propre, nous devrions créer quelques modèles et traits supplémentaires. Voici la structure recommandée :
+
+1. **InventoryLogModel** pour gérer les logs d'inventaire :
+
+```php
+<?php
+
+namespace App\Models;
+
+use App\Models\SqlConnect;
+use App\Utils\HttpException;
+use \PDO;
+
+class InventoryLogModel extends SqlConnect {
+    private string $table = "inventory_logs";
+
+    /**
+     * Log a change in inventory
+     */
+    public function logChange(
+        int $productId,
+        ?int $userId,
+        int $oldQuantity,
+        int $newQuantity,
+        string $changeType
+    ): bool {
+        $query = "INSERT INTO {$this->table} 
+                 (product_id, user_id, old_quantity, new_quantity, change_type)
+                 VALUES (:product_id, :user_id, :old_quantity, :new_quantity, :change_type)";
+        
+        $stmt = $this->db->prepare($query);
+        return $stmt->execute([
+            'product_id' => $productId,
+            'user_id' => $userId,
+            'old_quantity' => $oldQuantity,
+            'new_quantity' => $newQuantity,
+            'change_type' => $changeType
+        ]);
+    }
+}
+```
+
+2. **StockManagementTrait** pour les fonctionnalités communes :
+
+```php
+<?php
+
+namespace App\Traits;
+
+use App\Utils\HttpException;
+
+trait StockManagementTrait {
+    /**
+     * Validate product stock quantity
+     */
+    protected function validateStock(int $quantity): void {
+        if ($quantity < 0) {
+            throw new HttpException("Stock quantity cannot be negative", 400);
+        }
+    }
+
+    /**
+     * Generate a unique SKU
+     */
+    protected function generateSKU(string $categoryPrefix, string $name): string {
+        $cleanName = preg_replace('/[^A-Za-z0-9]/', '', $name);
+        $namePrefix = substr(strtoupper($cleanName), 0, 3);
+        $timestamp = time();
+        return sprintf("%s-%s-%d", strtoupper($categoryPrefix), $namePrefix, $timestamp);
+    }
+}
+```
+
+3. **Modifier ProductModel** pour utiliser ces nouvelles classes :
+
+```php
+<?php
+
+namespace App\Models;
+
+use App\Models\{SqlConnect, InventoryLogModel};
+use App\Traits\StockManagementTrait;
+use App\Utils\HttpException;
+use \PDO;
+
+class ProductModel extends SqlConnect {
+    use StockManagementTrait;
+
+    private InventoryLogModel $inventoryLog;
+
+    public function __construct() {
+        parent::__construct();
+        $this->inventoryLog = new InventoryLogModel();
+    }
+
+    public function createProduct(array $data) {
+        // ...existing validation code...
+
+        // Validate stock quantity if provided
+        if (isset($data['quantity_in_stock'])) {
+            $this->validateStock($data['quantity_in_stock']);
+        }
+
+        // Start transaction
+        $this->db->beginTransaction();
+
+        try {
+            // ...existing insert code...
+
+            // Log initial stock
+            $productId = $this->db->lastInsertId();
+            $this->inventoryLog->logChange(
+                $productId,
+                null, // user_id from session if needed
+                0,
+                $data['quantity_in_stock'] ?? 0,
+                'adjustment'
+            );
+
+            $this->db->commit();
+            return $this->getById($productId);
+
+        } catch (\Exception $e) {
+            $this->db->rollBack();
+            throw new HttpException("Failed to create product: " . $e->getMessage(), 500);
+        }
+    }
+}
+```
+
+Ces changements apportent :
+- ✅ Traçabilité des modifications de stock
+- ✅ Génération de SKU standardisée
+- ✅ Validation cohérente des stocks
+- ✅ Transactions pour l'intégrité des données
+- ✅ Meilleure séparation des responsabilités
+- ✅ Code plus maintenable et réutilisable
+
+Pour tester, créez un nouveau produit :
+```bash
+curl -X POST http://localhost/products \
+     -H "Authorization: Bearer YOUR_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+         "name": "Test Product",
+         "sku": "ELEC-TEST-001",
+         "price": 99.99,
+         "quantity_in_stock": 10,
+         "category_id": 1
+     }'
+```
