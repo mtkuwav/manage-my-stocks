@@ -21,6 +21,13 @@ class Product extends Controller {
     // | -------- CREATE METHODS -------- |
     // └──────────────────────────────────┘
 
+    /**
+     * Create a new product.
+     * 
+     * @throws HttpException if there's an error during product creation
+     * @return array The created product data
+     * @author Rémis Rubis, Mathieu Chauvet
+     */
     #[Route("POST", "/products", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
     public function createProduct() {
         try {
@@ -35,6 +42,38 @@ class Product extends Controller {
     // | -------- READ METHODS -------- |
     // └────────────────────────────────┘
 
+    /**
+     * Get a specific product by ID.
+     *
+     * @return array The product data
+     * @throws HttpException if product not found
+     * @author Rémis Rubis, Mathieu Chauvet
+     */
+    #[Route("GET", "/products/:id", middlewares: [AuthMiddleware::class], allowedRoles:['admin', 'manager'])]
+    public function getById() {
+        try {
+            $id = intval($this->params['id']);
+            return $this->product->getById($id);
+        } catch (HttpException $e) {
+            throw $e;
+        }
+    }
+
+    /**
+     * Get all products with optional limit.
+     *
+     * @return array Array of product records
+     * @author Rémis Rubis, Mathieu Chauvet 
+     */
+    #[Route("GET", "/products", middlewares: [AuthMiddleware::class], allowedRoles:['admin', 'manager'])]
+    public function getAll() {
+        try {
+            $limit = isset($this->params['limit']) ? intval($this->params['limit']) : null;
+            return $this->product->getAll($limit);
+        } catch (HttpException $e) {
+            throw $e;
+        }
+    }
 
     // ┌──────────────────────────────────┐
     // | -------- UPDATE METHODS -------- |
@@ -57,15 +96,35 @@ class Product extends Controller {
                 throw new HttpException("Missing parameters for the update.", 400);
             }
 
-            // Simplifier la validation des champs
             $allowedFields = array_intersect_key($data, array_flip($this->product->authorized_fields_to_update));
             if (empty($allowedFields)) {
                 throw new HttpException("No valid fields to update.", 400);
             }
 
-            // Laisser le modèle gérer les autres validations
             return $this->product->update($allowedFields, $id);
 
+        } catch (HttpException $e) {
+            throw $e;
+        }
+    }
+
+
+    // ┌──────────────────────────────────┐
+    // | -------- DELETE METHODS -------- |
+    // └──────────────────────────────────┘
+
+    /**
+     * Delete a product by ID.
+     *
+     * @throws HttpException if deletion fails
+     * @return array Success message
+     * @author Mathieu Chauvet
+     */
+    #[Route("DELETE", "/products/:id", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
+    public function deleteProduct() {
+        try {
+            $id = intval($this->params['id']);
+            return $this->product->delete($id);
         } catch (HttpException $e) {
             throw $e;
         }

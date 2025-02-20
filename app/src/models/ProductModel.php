@@ -272,6 +272,10 @@ class ProductModel extends SqlConnect {
                 $this->validateStock($data['quantity_in_stock']);
             }
 
+            if (isset($data['price'])) {
+                $this->validatePrice($data['price']);
+            }
+
             // Début de la transaction optimisée
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
@@ -316,25 +320,48 @@ class ProductModel extends SqlConnect {
     // └──────────────────────────────────┘
 
     /**
-     * Deletes a product by its ID.
+     * Deletes a product by its ID and handles related records.
      * 
      * @param int $id The ID of the product to delete
      * @return array An associative array containing a success message
+     * @throws HttpException If the product is not found or deletion fails
      * @author Mathieu Chauvet
      */
-    public function delete(int $id) {
-        $product = $this->getById($id);
-        if (empty((array)$product)) {
-            throw new HttpException("Product not found", 404);
+    public function delete(int $id): bool {
+        try {
+            // Récupérer le produit avant suppression
+            $product = $this->getById($id);
+            
+            try {
+                // Logger le changement de stock
+                $token = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+                $token = str_replace('Bearer ', '', $token);
+                $payload = JWT::decryptToken($token);
+                
+                // Log avant suppression
+                $this->inventoryLog->logChange(
+                    $id,
+                    $payload['user_id'] ?? null,
+                    $product['quantity_in_stock'],
+                    0,
+                    'deletion'
+                );
+
+                // Supprimer le produit (les logs seront supprimés en cascade)
+                $stmt = $this->db->prepare("DELETE FROM $this->tableProducts WHERE id = :id");
+                $success = $stmt->execute(['id' => $id]);
+                
+                if (!$success) {
+                    throw new HttpException("Failed to delete product", 500);
+                }
+
+                return true;
+
+            } catch (\Exception $e) {
+                throw $e;
+            }
+        } catch (HttpException $e) {
+            throw $e;
         }
-
-        $userReq = $this->db->prepare("DELETE FROM $this->tableProducts WHERE id = :id");
-        $success = $userReq->execute(["id" => $id]);
-
-        if (!$success) {
-            throw new HttpException("Failed to delete product", 500);
-        }
-
-        return ["message" => "Product successfully deleted"];
     }
 }

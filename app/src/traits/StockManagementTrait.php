@@ -49,4 +49,17 @@ trait StockManagementTrait {
             throw new HttpException("Current stock quantity is invalid", 500);
         }
     }
+
+    /**
+     * Validate that the price is greater than zero
+     * @param float|int $price The price to validate
+     * @throws HttpException if price is zero or negative
+     * @return void
+     * @author Mathieu Chauvet
+     */
+    protected function validatePrice($price): void {
+        if ($price <= 0) {
+            throw new HttpException("Price must be greater than zero", 400);
+        }
+    }
 }

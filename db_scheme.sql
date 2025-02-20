@@ -138,14 +138,15 @@ CREATE TABLE IF NOT EXISTS `inventory_logs` (
   `user_id` INT UNSIGNED NULL,
   `old_quantity` INT NOT NULL,
   `new_quantity` INT NOT NULL,
-  `change_type` ENUM('sale', 'return', 'adjustment', 'restock', 'initial') NOT NULL,
+  `change_type` ENUM('sale', 'return', 'adjustment', 'restock', 'initial', 'deletion') NOT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   INDEX `fk_inventory_logs_products_idx` (`product_id` ASC),
   INDEX `fk_inventory_logs_users_idx` (`user_id` ASC),
   CONSTRAINT `fk_inventory_logs_products`
     FOREIGN KEY (`product_id`)
-    REFERENCES `products` (`id`),
+    REFERENCES `products` (`id`)
+    ON DELETE CASCADE,
   CONSTRAINT `fk_inventory_logs_users`
     FOREIGN KEY (`user_id`)
     REFERENCES `users` (`id`)

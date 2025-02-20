@@ -17,7 +17,8 @@ class InventoryLogModel extends SqlConnect {
         'sale' => 'Stock reduction due to sale',
         'return' => 'Stock increase due to product return',
         'restock' => 'Stock increase from supplier delivery',
-        'initial' => 'Initial stock on product creation'
+        'initial' => 'Initial stock on product creation',
+        'deletion' => 'Product deletion'
     ];
 
     /**
