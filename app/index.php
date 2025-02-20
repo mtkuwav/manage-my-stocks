@@ -3,11 +3,10 @@
 require 'vendor/autoload.php';
 
 use App\Router;
-use App\Controllers\{User, Dogs, Auth, Category, Product};
+use App\Controllers\{User, Auth, Category, Product};
 
 $controllers = [
     User::class,
-    Dogs::class,
     Auth::class,
     Category::class,
     Product::class
