@@ -1,85 +1,118 @@
-# PHP Docker Project - A Fully Containerized PHP Development Environment
+# Inventory Management API
 
-## Introduction
+## Overview
 
-Welcome to the PHP Docker Project! This project is designed to make your life easier by providing a fully containerized PHP development environment. With Docker, you can run your PHP application, MySQL database, and phpMyAdmin with just a few commands. No more "it works on my machine" excuses!
+This API provides a comprehensive solution for small business owners to manage their inventory in real-time. Built with PHP and Docker, it offers secure endpoints for stock management, order processing, and product management.
 
-## Prerequisites
+## Features
 
-Before you can start, you'll need to have Docker and Docker Compose installed on your machine. Here's how to do it:
+- 🔐 JWT Authentication
+- 📦 Complete Product Management (CRUD)
+- 🗂️ Stock Level Tracking
+<!-- - 📋 Order Processing System -->
+<!-- - 🚚 Delivery Management
+- ↩️ Returns Processing -->
 
-- For macOS and Windows users, download and install [Docker Desktop](https://docs.docker.com/get-started/introduction/get-docker-desktop/).
-- For Linux users, follow the instructions in the [Docker documentation](https://docs.docker.com/desktop/setup/install/linux/).
-- Composer installed on your machine. You can download it from [here](https://getcomposer.org/download/).
+## Technical Requirements
 
-## Configuration
+- Docker
+- Docker Compose
+- Composer (for local development)
 
-Before you start the project, you'll need to configure your environment variables. Copy the [.env.sample](./.env.sample) file to `.env` and fill in the required values:
+## Quick Start
 
+1. Clone the repository and setup environment:
 ```sh
+git clone <repository-url>
+cd php-docker-api
 cp .env.sample .env
 ```
 
-Edit the `.env` file and set the following variables:
-
-- `DB_NAME`: The name of your MySQL database
-- `DB_USER`: The MySQL user
-- `DB_PASSWORD`: The MySQL user's password
-- `DB_ROOT_PASSWORD`: The MySQL root user's password
-- `DB_PORT`: The port for MySQL (default is 3306)
-- `PHPMYADMIN_PORT`: The port for phpMyAdmin (default is 8090)
-
-## How to Use?
-
-```sh
-cd app && composer install && cd ../
+2. Configure your `.env` file with appropriate values:
+```env
+DB_NAME=inventory_db
+DB_USER=your_user
+DB_PASSWORD=your_password
+DB_ROOT_PASSWORD=your_root_password
+DB_PORT=3306
+PHPMYADMIN_PORT=8090
+JWT_SECRET=your_secret_key
 ```
 
-Once you have Docker and Docker Compose installed and your environment variables configured, you can start the project with the following command:
-
+3. Install dependencies and start the containers:
 ```sh
+cd app && composer install && cd ../
 docker-compose up -d
 ```
 
-**Explanation:**
-
-- `docker-compose`: The Docker Compose command
-- `up`: The command to start the services
-- `-d`: Run the services in detached mode (in the background)
-
-This command will start the Nginx server, PHP application, MySQL database, and phpMyAdmin.
-
-_That's it! You now have a fully containerized PHP development environment. Happy coding!_
-
-## Accessing the Services
-
-- Your PHP application will be available at [http://localhost](http://localhost)
-- phpMyAdmin will be available at [http://localhost:8090](http://localhost:8090).
-
-## Stopping the Project
-
-To stop the project, run the following command:
-
+4. (Optional) If you want to populate the database, execute this PHP script :
 ```sh
-docker-compose down
+php app/src/scripts/populate_db.php
+```
+This will do it automatically for you.
+
+## API Endpoints
+
+### Authentication
+- POST `/api/auth/register` - Register new user
+- POST `/api/auth/login` - Login and receive JWT token
+
+### Products
+- GET `/api/products` - List all products
+- GET `/api/products/{id}` - Get single product
+- POST `/api/products` - Create new product
+- PUT `/api/products/{id}` - Update product
+- DELETE `/api/products/{id}` - Delete product
+
+<!-- ### Orders
+- GET `/api/orders` - List all orders
+- POST `/api/orders` - Create new order
+- PUT `/api/orders/{id}` - Update order status
+- DELETE `/api/orders/{id}` - Cancel order -->
+
+### Stock Management
+- GET `/api/stock/{product_id}` - Check stock level
+- PUT `/api/stock/{product_id}` - Update stock level
+
+**For a more precise documentation, check [this](./DOCUMENTATION.md).** 
+
+## Development Access
+
+- API Base URL: [http://localhost/api](http://localhost/api)
+- phpMyAdmin: [http://localhost:8090](http://localhost:8090)
+- API Documentation: [http://localhost/api/docs](http://localhost/api/docs)
+
+## Security
+
+All API endpoints (except authentication) require a valid JWT token in the Authorization header:
+```
+Authorization: Bearer <your_jwt_token>
 ```
 
-## Logs
+## Error Handling
 
-To view the logs of the services, you can use the following command:
-
-```sh
-docker-compose logs -f
+The API uses standard HTTP status codes and returns JSON responses:
+```json
+{
+    "message": "Error description"
+}
 ```
 
-This will show the logs of all the services. Press `Ctrl + C` to exit the logs.
+## Testing
+
+Run the test suite with:
+```sh
+docker-compose exec php vendor/bin/phpunit
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
 ## License
 
-This project is open-source software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-
-## Conclusion
-
-And there you have it! A fully containerized PHP development environment with Docker. Now you can focus on writing awesome PHP code without worrying about the underlying infrastructure. Happy coding!
-
-P.S. If you encounter any issues, remember: "It's not a bug, it's a feature!"
+This project is licensed under the MIT License - see the LICENSE file for details.

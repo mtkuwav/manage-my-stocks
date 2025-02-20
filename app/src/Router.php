@@ -4,7 +4,7 @@ namespace App;
 
 use App\Utils\Route;
 use App\Utils\JWT;
-use App\Middlewares\AuthMiddleware;
+use App\Utils\HttpException;
 
 class Router {
     protected array $routes = [];
@@ -79,6 +79,9 @@ class Router {
                     try {
                         // Call the method on the controller instance with the parameters
                         $response = call_user_func_array([$controllerInstance, $method], array_values($params));
+                    } catch (HttpException $e) {
+                        http_response_code($e->getHttpCode());
+                        $response = ["error" => $e->getMessage()];
                     } catch (\Exception $e) {
                         http_response_code(500);
                         $response = ["error" => $e->getMessage()];
