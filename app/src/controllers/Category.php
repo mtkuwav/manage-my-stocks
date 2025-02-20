@@ -17,29 +17,39 @@ class Category extends Controller {
         parent::__construct($params);
     }
 
+
+    // ┌──────────────────────────────────┐
+    // | -------- CREATE METHODS -------- |
+    // └──────────────────────────────────┘
+
     /**
-     * Delete a category by ID.
+     * Create a new category.
      *
-     * @return array The deletion result
-     * @throws HttpException if deletion fails
+     * @return array The newly created category data
+     * @throws HttpException if creation fails or required fields are missing
      * @author Mathieu Chauvet
      */
-    #[Route("DELETE", "/categories/:id", middlewares: [AuthMiddleware::class], allowedRoles:['admin', 'manager'])]
-    public function deleteCategory() {
+    #[Route("POST", "/categories", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
+    public function createCategory() {
         try {
-            $id = intval($this->params['id']);
+            $data = $this->body;
 
-            if (!$this->category->getById($id)) {
-                throw new HttpException("Category not found", 404);
+            if (empty($data['name'])) {
+                throw new HttpException("Name is required for category creation", 400);
             }
 
-            return $this->category->delete($id);
+            return $this->category->createCategory($data);
         } catch (HttpException $e) {
             throw $e;
         } catch (\Exception $e) {
             throw new HttpException($e->getMessage(), 500);
         }
     }
+
+
+    // ┌────────────────────────────────┐
+    // | -------- READ METHODS -------- |
+    // └────────────────────────────────┘
 
     /**
      * Get a specific category by ID.
@@ -96,6 +106,11 @@ class Category extends Controller {
         }
     }
 
+
+    // ┌──────────────────────────────────┐
+    // | -------- UPDATE METHODS -------- |
+    // └──────────────────────────────────┘
+
     /**
      * Update category information.
      *
@@ -136,23 +151,28 @@ class Category extends Controller {
         }
     }
 
+
+    // ┌──────────────────────────────────┐
+    // | -------- DELETE METHODS -------- |
+    // └──────────────────────────────────┘
+
     /**
-     * Create a new category.
+     * Delete a category by ID.
      *
-     * @return array The newly created category data
-     * @throws HttpException if creation fails or required fields are missing
+     * @return array The deletion result
+     * @throws HttpException if deletion fails
      * @author Mathieu Chauvet
      */
-    #[Route("POST", "/categories", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
-    public function createCategory() {
+    #[Route("DELETE", "/categories/:id", middlewares: [AuthMiddleware::class], allowedRoles:['admin', 'manager'])]
+    public function deleteCategory() {
         try {
-            $data = $this->body;
+            $id = intval($this->params['id']);
 
-            if (empty($data['name'])) {
-                throw new HttpException("Name is required for category creation", 400);
+            if (!$this->category->getById($id)) {
+                throw new HttpException("Category not found", 404);
             }
 
-            return $this->category->createCategory($data);
+            return $this->category->delete($id);
         } catch (HttpException $e) {
             throw $e;
         } catch (\Exception $e) {
