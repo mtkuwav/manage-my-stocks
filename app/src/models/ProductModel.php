@@ -44,13 +44,28 @@ class ProductModel extends SqlConnect {
                 }
             }
 
-            // Validate category before transaction
-            $categoryCheck = $this->db->prepare("SELECT id, name FROM categories WHERE id = :id");
+            // Validate category and get its prefix
+            $categoryCheck = $this->db->prepare(
+                "SELECT c.id, c.name 
+                FROM categories c 
+                WHERE c.id = :id"
+            );
             $categoryCheck->execute(["id" => $data["category_id"]]);
             $category = $categoryCheck->fetch(PDO::FETCH_ASSOC);
             
             if (!$category) {
                 throw new HttpException("Category not found", 404);
+            }
+
+            // Generate clean category prefix (prevent empty prefix)
+            $categoryName = trim($category['name']);
+            if (empty($categoryName)) {
+                throw new HttpException("Invalid category name", 400);
+            }
+            
+            $categoryPrefix = substr(strtoupper($categoryName), 0, 4);
+            if (empty($categoryPrefix)) {
+                throw new HttpException("Could not generate valid SKU prefix from category", 400);
             }
 
             // Check for duplicate product name in the same category
@@ -70,7 +85,6 @@ class ProductModel extends SqlConnect {
             }
 
             // Prepare all data before transaction
-            $categoryPrefix = substr(strtoupper($category['name']), 0, 4);
             $data['sku'] = $this->generateSKU($categoryPrefix, $data['name']);
             $data['quantity_in_stock'] = $data['quantity_in_stock'] ?? 0;
             $data['description'] = $data['description'] ?? null;

@@ -15,6 +15,18 @@ CREATE TABLE IF NOT EXISTS `users` (
 );
 
 -- --------------------------------------------------------
+-- `categories` table to order products
+-- --------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `categories` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(50) NOT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `name_UNIQUE` (`name` ASC)
+);
+
+-- --------------------------------------------------------
 -- `products` table for stocks management
 -- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `products` (
@@ -28,19 +40,12 @@ CREATE TABLE IF NOT EXISTS `products` (
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE INDEX `sku_UNIQUE` (`sku` ASC)
-);
-
--- --------------------------------------------------------
--- `categories` table to order products
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `categories` (
-  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(50) NOT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE INDEX `name_UNIQUE` (`name` ASC)
+  UNIQUE INDEX `sku_UNIQUE` (`sku` ASC),
+  CONSTRAINT `fk_products_categories`
+    FOREIGN KEY (`category_id`)
+    REFERENCES `categories` (`id`)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
 );
 
 -- --------------------------------------------------------
