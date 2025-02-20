@@ -17,29 +17,10 @@ class User extends Controller {
         parent::__construct($param);
     }
 
-    /**
-     * Delete a user by ID.
-     *
-     * @return array The deletion result
-     * @throws HttpException if deletion fails
-     * @author Rémis Rubis, Mathieu Chauvet
-     */
-    #[Route("DELETE", "/users/:id", middlewares: [AuthMiddleware::class], allowedRoles:['admin'])]
-    public function deleteUser() {
-        try {
-            $id = intval($this->params['id']);
 
-            if (!$this->user->get($id)) {
-                throw new HttpException("User not found", 404);
-            }
-
-            return $this->user->delete($id);
-        } catch (HttpException $e) {
-            throw $e;
-        } catch (\Exception $e) {
-            throw new HttpException($e->getMessage(), 500);
-        }
-    }
+    // ┌────────────────────────────────┐
+    // | -------- READ METHODS -------- |
+    // └────────────────────────────────┘
 
     /**
      * Get a specific user by ID.
@@ -95,6 +76,11 @@ class User extends Controller {
             throw new HttpException($e->getMessage(), 500);
         }
     }
+
+
+    // ┌──────────────────────────────────┐
+    // | -------- UPDATE METHODS -------- |
+    // └──────────────────────────────────┘
 
     /**
      * Update user information.
@@ -169,6 +155,35 @@ class User extends Controller {
 
             $this->user->updatePassword($id, $data['new_password']);
             return ["message" => "Password updated successfully"];
+        } catch (HttpException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 500);
+        }
+    }
+
+
+    // ┌──────────────────────────────────┐
+    // | -------- DELETE METHODS -------- |
+    // └──────────────────────────────────┘
+
+    /**
+     * Delete a user by ID.
+     *
+     * @return array The deletion result
+     * @throws HttpException if deletion fails
+     * @author Rémis Rubis, Mathieu Chauvet
+     */
+    #[Route("DELETE", "/users/:id", middlewares: [AuthMiddleware::class], allowedRoles:['admin'])]
+    public function deleteUser() {
+        try {
+            $id = intval($this->params['id']);
+
+            if (!$this->user->get($id)) {
+                throw new HttpException("User not found", 404);
+            }
+
+            return $this->user->delete($id);
         } catch (HttpException $e) {
             throw $e;
         } catch (\Exception $e) {

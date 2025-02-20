@@ -15,6 +15,11 @@ class Auth extends Controller {
         parent::__construct($params);
     }
 
+
+    // ┌──────────────────────────────────┐
+    // | -------- CREATE METHODS -------- |
+    // └──────────────────────────────────┘
+
     /**
      * Register a new user with email, password and username
      * 
@@ -39,6 +44,10 @@ class Auth extends Controller {
         }
     }
 
+
+    // ┌────────────────────────────────┐
+    // | -------- AUTH METHODS -------- |
+    // └────────────────────────────────┘
 
     /**
      * Authenticate a user and generate access and refresh tokens
