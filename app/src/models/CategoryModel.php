@@ -155,6 +155,11 @@ class CategoryModel extends SqlConnect {
             }
         }
 
+        # Validate name if present
+        if (isset($data['name']) && empty(trim($data['name']))) {
+            throw new HttpException("Category name cannot be empty", 400);
+        }
+
         # Check if there are any valid fields to update
         if (empty($fields)) {
             throw new HttpException("No valid fields to update. Allowed fields: " . implode(", ", $this->authorized_fields_to_update), 400);

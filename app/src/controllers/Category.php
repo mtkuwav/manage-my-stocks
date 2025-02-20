@@ -120,6 +120,11 @@ class Category extends Controller {
                 throw new HttpException("No valid fields to update.", 400);
             }
 
+            # Check for empty name
+            if (isset($data['name']) && empty(trim($data['name']))) {
+                throw new HttpException("Category name cannot be empty", 400);
+            }
+
             $this->category->update($allowedFields, intval($id));
 
             # Let's return the updated category
