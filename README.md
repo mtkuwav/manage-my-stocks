@@ -78,7 +78,7 @@ This will do it automatically for you.
 
 ## Development Access
 
-- API Base URL: [http://localhost/api](http://localhost/api)
+- API Base URL: [http://localhost/](http://localhost/)
 - phpMyAdmin: [http://localhost:8090](http://localhost:8090)
 <!-- - API Documentation: [http://localhost/api/docs](http://localhost/api/docs) -->
 
