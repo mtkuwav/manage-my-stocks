@@ -80,7 +80,7 @@ This will do it automatically for you.
 
 - API Base URL: [http://localhost/api](http://localhost/api)
 - phpMyAdmin: [http://localhost:8090](http://localhost:8090)
-- API Documentation: [http://localhost/api/docs](http://localhost/api/docs)
+<!-- - API Documentation: [http://localhost/api/docs](http://localhost/api/docs) -->
 
 ## Security
 
