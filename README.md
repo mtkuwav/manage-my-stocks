@@ -53,7 +53,7 @@ This will do it automatically for you.
 
 ## Database diagram
 
-You can consult the database diagram either with [https://github.com/mtkuwav/manage-my-stocks/blob/main/database%20diagram.pdf](the pdf file) in the repo or directly in dbdiagram.io with [https://dbdiagram.io/d/inventory-final-67ba1182263d6cf9a018de50](this link).
+You can consult the database diagram either with [the pdf file](https://github.com/mtkuwav/manage-my-stocks/blob/main/database%20diagram.pdf) in the repo or directly in dbdiagram.io with [this link](https://dbdiagram.io/d/inventory-final-67ba1182263d6cf9a018de50).
 
 ## API Endpoints
 
