@@ -37,7 +37,7 @@ class UserModel extends SqlConnect {
             throw new HttpException("User not found", 404);
         }
     
-        return $user;
+        return $this->removeSensitiveData($user);
     }
 
     /**
@@ -67,7 +67,8 @@ class UserModel extends SqlConnect {
             }
             $req->execute();
             
-            return $req->fetchAll(PDO::FETCH_ASSOC);
+            $users = $req->fetchAll(PDO::FETCH_ASSOC);
+            return array_map([$this, 'removeSensitiveData'], $users);
         } catch (\PDOException $e) {
             throw new HttpException("Database error: " . $e->getMessage(), 500);
         }
@@ -208,5 +209,22 @@ class UserModel extends SqlConnect {
         }
 
         return ["message" => "User successfully deleted"];
+    }
+
+
+    // ┌────────────────────────────────┐
+    // | -------- MISC METHODS -------- |
+    // └────────────────────────────────┘
+
+    /**
+     * Removes sensitive data (password hash) from user data.
+     * 
+     * @param array $user The user data array containing sensitive information
+     * @return array The user data array with sensitive information removed
+     * @author Mathieu Chauvet
+     */
+    private function removeSensitiveData(array $user) {
+        unset($user['password_hash']);
+        return $user;
     }
 }
