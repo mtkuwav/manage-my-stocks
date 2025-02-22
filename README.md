@@ -51,6 +51,10 @@ php app/src/scripts/populate_db.php
 ```
 This will do it automatically for you.
 
+## Database diagram
+
+You can consult the database diagram either with [the pdf file](https://github.com/mtkuwav/manage-my-stocks/blob/main/database%20diagram.pdf) in the repo or directly in dbdiagram.io with [this link](https://dbdiagram.io/d/inventory-final-67ba1182263d6cf9a018de50).
+
 ## API Endpoints
 
 ### Authentication
@@ -78,9 +82,9 @@ This will do it automatically for you.
 
 ## Development Access
 
-- API Base URL: [http://localhost/api](http://localhost/api)
+- API Base URL: [http://localhost/](http://localhost/)
 - phpMyAdmin: [http://localhost:8090](http://localhost:8090)
-- API Documentation: [http://localhost/api/docs](http://localhost/api/docs)
+<!-- - API Documentation: [http://localhost/api/docs](http://localhost/api/docs) -->
 
 ## Security
 
