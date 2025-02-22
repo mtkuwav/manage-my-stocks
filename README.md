@@ -51,6 +51,10 @@ php app/src/scripts/populate_db.php
 ```
 This will do it automatically for you.
 
+## Database diagram
+
+You can consult the database diagram either with [https://github.com/mtkuwav/manage-my-stocks/blob/main/database%20diagram.pdf](the pdf file) in the repo or directly in dbdiagram.io with [https://dbdiagram.io/d/inventory-final-67ba1182263d6cf9a018de50](this link).
+
 ## API Endpoints
 
 ### Authentication
