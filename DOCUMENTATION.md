@@ -227,7 +227,6 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
     {
         "id": 1,
         "username": "John Doe",
-        "password_hash": "$2y$10$fV3K74l...",
         "email": "john.doe@example.com",
         "role": "admin",
         "created_at": "2025-01-01T00:00:00.000Z",
@@ -236,7 +235,6 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
     {
         "id": 2,
         "username": "Alice Bob",
-        "password_hash": "$2y$10$fV3K74l...",
         "email": "alice.bob@example.com",
         "role": "manager",
         "created_at": "2025-01-01T00:00:00.000Z",
