@@ -133,33 +133,6 @@ class UserModel extends SqlConnect {
     }
 
     /**
-     * Updates the password of a user.
-     *
-     * @param int $userId The ID of the user whose password is to be updated.
-     * @param string $newPassword The new password.
-     * @return bool True if the password was updated successfully, false otherwise.
-     * @throws HttpException If the update fails.
-     * @author Mathieu Chauvet
-     */
-    public function updatePassword(int $userId, string $newPassword) {
-        $saltedPassword = $newPassword . $this->passwordSalt;
-        $hashedPassword = password_hash($saltedPassword, PASSWORD_BCRYPT);
-
-        $query = "UPDATE $this->userTable SET password_hash = :password_hash WHERE id = :id";
-        $req = $this->db->prepare($query);
-        $success = $req->execute([
-            'password_hash' => $hashedPassword,
-            'id' => $userId
-        ]);
-
-        if (!$success) {
-            throw new HttpException("Failed to update password", 500);
-        }
-
-        return true;
-    }
-
-    /**
      * Promotes a user from manager role to admin role.
      * 
      * @param int $userId The ID of the user to promote

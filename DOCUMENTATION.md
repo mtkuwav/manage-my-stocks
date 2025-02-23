@@ -178,6 +178,26 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 }
 ```
 
+### Update User Password
+- **Route**: `PATCH /auth/update-password`
+- **Access**: Private (Admin and manager users)
+- **Description**: Update the authenticated user's password based on its bearer token
+
+**Request**:
+```json
+{
+    "current_password": "current123",
+    "new_password": "new123"
+}
+```
+
+**Response**:
+```json
+{
+    "message": "Password updated successfully"
+}
+```
+
 ## Users
 
 ### Promote a manager user to admin role
@@ -266,25 +286,6 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
     "role": "manager",
     "created_at": "2025-01-01T00:00:00.000Z",
     "updated_at": "2025-01-01T00:00:00.000Z"
-}
-```
-
-### Update User Password
-- **Route**: `PATCH /users/:id/update-password`
-- **Access**: Private (Admin users)
-- **Description**: Updates the password of an user
-
-**Request**:
-```json
-{
-    "new_password": "newpassword"
-}
-```
-
-**Response**:
-```json
-{
-    "message": "Password updated successfully"
 }
 ```
 
