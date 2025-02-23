@@ -4,8 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\Controller;
 use App\Models\UserModel;
-use App\Utils\Route;
-use App\Utils\HttpException;
+use App\Utils\{Route, HttpException, JWT};
 use App\Middlewares\AuthMiddleware;
 
 class User extends Controller {
@@ -137,23 +136,43 @@ class User extends Controller {
     }
 
     /**
-     * Update the password of an user.
+     * Update the password of the authenticated user.
      *
      * @throws HttpException if the new password is missing or update fails
      * @return array containing success message
      * @author Mathieu Chauvet
      */
-    #[Route("PATCH", "/users/:id/update-password", middlewares: [AuthMiddleware::class], allowedRoles: ['admin'])]
+    #[Route("PATCH", "/update-password", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
     public function updateUserPassword() {
         try {
-            $id = intval($this->params['id']);
             $data = $this->body;
+
+            $token = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+            $token = str_replace('Bearer ', '', $token);
+            $payload = JWT::decryptToken($token);
+            $userId = $payload['user_id'] ?? null;
+
+            if (!$userId) {
+                throw new HttpException("Authentication required", 401);
+            }
+
+            if (empty($data['current_password'])) {
+                throw new HttpException("Current password is required", 400);
+            }
+
+            if (!$this->user->verifyPassword($userId, $data['current_password'])) {
+                throw new HttpException("Current password is incorrect", 401);
+            }
+
+            if ($data['current_password'] === $data['new_password']) {
+                throw new HttpException("New password must be different from current password", 400);
+            }
 
             if (empty($data['new_password'])) {
                     throw new HttpException("New password is required.", 400);
             }
 
-            $this->user->updatePassword($id, $data['new_password']);
+            $this->user->updatePassword($userId, $data['new_password']);
             return ["message" => "Password updated successfully"];
         } catch (HttpException $e) {
             throw $e;

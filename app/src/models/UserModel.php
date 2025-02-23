@@ -227,4 +227,25 @@ class UserModel extends SqlConnect {
         unset($user['password_hash']);
         return $user;
     }
+
+    /**
+     * Verify user's password
+     *
+     * @param int $userId The ID of the user
+     * @param string $password The password to verify
+     * @return bool True if password is correct, false otherwise
+     */
+    public function verifyPassword(int $userId, string $password): bool {
+        $query = "SELECT password_hash FROM $this->userTable WHERE id = :id";
+        $req = $this->db->prepare($query);
+        $req->execute(['id' => $userId]);
+        
+        $user = $req->fetch(PDO::FETCH_ASSOC);
+        if (!$user) {
+            return false;
+        }
+
+        $saltedPassword = $password . $this->passwordSalt;
+        return password_verify($saltedPassword, $user['password_hash']);
+    }
 }
