@@ -22,21 +22,26 @@
    - [List Products](#list-products)
    - [Delete Product](#delete-product)
 
-4. [Inventory Logs](#inventory-logs)
+4. [Orders](#orders)
+   - [Create Order](#create-order)
+   - [Get Order](#get-order)
+   - [Update Order Status](#update-order-status)
+
+5. [Inventory Logs](#inventory-logs)
    - [List logs](#list-logs-with-optional-limit)
    - [Get A Log](#get-log)
 
-5. [Categories](#categories)
+6. [Categories](#categories)
    - [Create Category](#create-category)
    - [Update Category](#update-category)
    - [Get Category](#get-category)
    - [List Categories](#list-categories)
    - [Delete Category](#delete-category)
 
-6. [Error Handling](#error-handling)
+7. [Error Handling](#error-handling)
    - [Error Responses](#error-responses)
 
-7. [Security Information](#security-information)
+8. [Security Information](#security-information)
    - [Token Security](#token-security)
 
 ## **IMPORTANT NOTE**
@@ -478,6 +483,85 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
     "product_sku": "PROD-DES-0000000000"
 }
 ```
+
+## Orders
+
+### Create Order
+- **Route**: `POST /orders`
+- **Access**: Private (admin, manager)
+- **Description**: Create a new order and update product stock accordingly
+
+**Request**:
+```json
+{
+    "user_id": 1,
+    "items": [
+        {
+            "product_id": 1,
+            "quantity": 2
+        },
+        {
+            "product_id": 2,
+            "quantity": 1
+        }
+    ]
+}
+```
+
+**Response**:
+```json
+{
+    "id": 1,
+    "user_name": "admin",
+    "status": "pending",
+    "total_amount": 2649.97,
+    "created_at": "2025-02-23 15:04:22",
+    "updated_at": "2025-02-23 15:04:22",
+    "items": [
+        {
+            "id": 1,
+            "product_name": "Laptop Dell XPS 13",
+            "sku": "ELEC-LAP-1740092136",
+            "quantity": 2,
+            "unit_price": 1299.99
+        },
+        {
+            "id": 2,
+            "product_name": "The Art of Programming",
+            "sku": "BOOK-THE-1740092136",
+            "quantity": 1,
+            "unit_price": 49.99
+        }
+    ]
+}
+```
+
+### Get Order
+- **Route**: `GET /orders/{id}`
+- **Access**: Private (admin, manager)
+- **Description**: Retrieve order details with its items
+
+**Response**: Same as create order response
+
+### Update Order Status
+- **Route**: `PATCH /orders/{id}/status`
+- **Access**: Private (admin, manager)
+- **Description**: Update the status of an order
+
+**Request**:
+```json
+{
+    "status": "processing"
+}
+```
+
+**Available Statuses**:
+- `pending`: Order is awaiting processing
+- `processing`: Order is being processed
+- `completed`: Order has been completed
+- `cancelled`: Order has been cancelled
+
+**Response**: Same as create order response but with updated status
 
 ## Categories
 
