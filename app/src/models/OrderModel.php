@@ -87,7 +87,9 @@ class OrderModel extends SqlConnect {
      * @author Mathieu Chauvet
      */
     public function getById(int $id) {
-        $query = "SELECT o.*, u.username as user_name FROM $this->ordersTable o 
+        $query = "SELECT o.*, 
+                    u.username as user_name
+                FROM $this->ordersTable o 
                 LEFT JOIN users u ON o.user_id = u.id 
                 WHERE o.id = :id";
         
@@ -99,8 +101,10 @@ class OrderModel extends SqlConnect {
             throw new HttpException("Order not found", 404);
         }
 
-        // Get order items
-        $query = "SELECT oi.*, p.name as product_name, p.sku 
+        $query = "SELECT oi.*,
+                    p.name as product_name,
+                    p.sku as product_sku,
+                    p.price as current_price
                 FROM $this->orderItemsTable oi
                 LEFT JOIN products p ON oi.product_id = p.id
                 WHERE oi.order_id = :order_id";
