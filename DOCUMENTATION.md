@@ -440,7 +440,9 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
         "new_quantity": "10",
         "change_type": "initial",
         "created_at": "2021-01-01T00:00:00.000Z",
-        "username": "john.doe"
+        "username": "john.doe",
+        "product_name": "Product name",
+        "product_sku": "PROD-DES-0000000000"
     },
     {
         "id": "2",
@@ -449,7 +451,9 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
         "new_quantity": "25",
         "change_type": "initial",
         "created_at": "2021-01-01T00:00:00.000Z",
-        "username": "john.doe"
+        "username": "john.doe",
+        "product_name": "Another product name",
+        "product_sku": "PROD-DES-0000000001"
     },
     // etc.
 ]
@@ -469,7 +473,9 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
     "new_quantity": "10",
     "change_type": "initial",
     "created_at": "2021-01-01T00:00:00.000Z",
-    "username": "john.doe"
+    "username": "john.doe",
+    "product_name": "Product name",
+    "product_sku": "PROD-DES-0000000000"
 }
 ```
 
