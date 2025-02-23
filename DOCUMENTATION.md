@@ -1,6 +1,8 @@
 # API Documentation
 
 ## Table of Contents
+- [IMPORTANT](#important-note)
+- [Filters]
 1. [Authentication](#authentication)
    - [Register](#register)
    - [Login](#login)
@@ -52,6 +54,87 @@ At first, the database will only contain one admin user so that this user can pr
 
 **email**: ``admin@boutique.com`` <br>
 **password**: ``adminpswd``
+
+## Filters
+
+The API supports filtering for list endpoints (GET methods returning multiple items). Filters can be combined to refine results.
+
+### Common Filters
+All list endpoints support these basic filters:
+```json
+{
+    "date_from": "2025-01-01",  // Filter items from this date
+    "date_to": "2025-12-31",    // Filter items up to this date
+    "limit": 10                 // Limit number of returned items
+}
+```
+
+### Resource-Specific Filters
+
+#### Orders
+```json
+{
+    "status": "pending",        // Filter by order status
+    "user_id": 1,              // Filter by user ID
+    "min_amount": 50.00,       // Minimum order amount
+    "max_amount": 200.00       // Maximum order amount
+}
+```
+
+#### Products
+```json
+{
+    "category_id": 1,          // Filter by category
+    "price_min": 10.00,        // Minimum price
+    "price_max": 100.00        // Maximum price
+}
+```
+
+#### Inventory Logs
+```json
+{
+    "change_type": "adjustment", // Filter by change type
+    "product_id": 1             // Filter by product ID
+}
+```
+
+#### Users
+```json
+{
+    "role": "manager",          // Filter by user role
+    "username": "john"          // Filter by username (partial match)
+}
+```
+
+### Usage Examples
+
+1. Get orders from last month with status 'pending':
+```
+GET /orders?date_from=2025-01-01&date_to=2025-01-31&status=pending
+```
+
+2. Get products in price range:
+```
+GET /products?price_min=10.00&price_max=100.00&limit=5
+```
+
+3. Get inventory logs for a specific product:
+```
+GET /inventory-logs?product_id=1&change_type=adjustment
+```
+
+4. Get manager users created this year:
+```
+GET /users?role=manager&date_from=2025-01-01
+```
+
+### Notes
+- All date filters must be in `YYYY-MM-DD` format
+- Price and amount filters must be decimal numbers
+- IDs must be integers
+- Text filters are case-insensitive
+- Multiple filters can be combined using `&`
+- Invalid or unknown filter parameters are ignored
 
 ## Authentication
 
@@ -248,10 +331,21 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 }
 ```
 
-### List Users Profile (with optional limit)
-- **Route**: `GET /users` (add `?limit=[the limit you want]` if you want limited results)
+### List Users Profile
+- **Route**: `GET /users`
 - **Access**: Private (Admin users)
-- **Description**: Retrieve the profile of all users in an array or the number of them specified
+- **Description**: List users with optional filters
+
+**Query Parameters**:
+```json
+{
+    "limit": 10,              // Optional: Limit number of results
+    "date_from": "2025-01-01", // Optional: Filter from date
+    "date_to": "2025-12-31",   // Optional: Filter to date
+    "role": "manager",         // Optional: Filter by role
+    "username": "john"         // Optional: Filter by username (partial match)
+}
+```
 
 **Response**:
 ```json
@@ -395,10 +489,22 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 }
 ```
 
-### List Products (with optional limit)
-- **Route**: `GET /products` (add `?limit=[the limit you want]` if you want limited results)
+### List Products
+- **Route**: `GET /products`
 - **Access**: Private (admin, manager)
-- **Description**: List all products or the number of products specified
+- **Description**: List products with optional filters
+
+**Query Parameters**:
+```json
+{
+    "limit": 10,              // Optional: Limit number of results
+    "date_from": "2025-01-01", // Optional: Filter from date
+    "date_to": "2025-12-31",   // Optional: Filter to date
+    "category_id": 1,          // Optional: Filter by category
+    "price_min": 10.00,        // Optional: Minimum price
+    "price_max": 100.00        // Optional: Maximum price
+}
+```
 
 **Response**:
 ```json
@@ -432,11 +538,21 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 
 ## Inventory Logs
 
-### List Logs (with optional limit)
-
-- **Route**: `GET /inventory-logs` (add `?limit=[the limit you want]` if you want limited results)
+### List Inventory Logs
+- **Route**: `GET /inventory-logs`
 - **Access**: Private (Admin and manager users)
-- **Description**: Retrieve the profile of all users in an array or the number of them specified
+- **Description**: List inventory logs with optional filters
+
+**Query Parameters**:
+```json
+{
+    "limit": 10,              // Optional: Limit number of results
+    "date_from": "2025-01-01", // Optional: Filter from date
+    "date_to": "2025-12-31",   // Optional: Filter to date
+    "change_type": "initial",  // Optional: Filter by change type
+    "product_id": 1           // Optional: Filter by product ID
+}
+```
 
 **Response**:
 ```json
@@ -452,18 +568,7 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
         "product_name": "Product name",
         "product_sku": "PROD-DES-0000000000"
     },
-    {
-        "id": "2",
-        "product_id": "2",
-        "old_quantity": "0",
-        "new_quantity": "25",
-        "change_type": "initial",
-        "created_at": "2021-01-01T00:00:00.000Z",
-        "username": "john.doe",
-        "product_name": "Another product name",
-        "product_sku": "PROD-DES-0000000001"
-    },
-    // etc.
+    // ...
 ]
 ```
 
@@ -566,10 +671,13 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 **Query Parameters**:
 ```json
 {
-    "status": "pending",        // Optional: Filter by order status
-    "user_id": 1,              // Optional: Filter by user
+    "limit": 10,              // Optional: Limit number of results
+    "status": "pending",      // Optional: Filter by order status
+    "user_id": 1,            // Optional: Filter by user
     "date_from": "2025-01-01", // Optional: Filter from date
-    "date_to": "2025-12-31"    // Optional: Filter to date
+    "date_to": "2025-12-31",   // Optional: Filter to date
+    "min_amount": 50.00,      // Optional: Minimum order amount
+    "max_amount": 200.00      // Optional: Maximum order amount
 }
 ```
 
@@ -580,7 +688,7 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
         "id": 1,
         "user_id": 1,
         "status": "pending",
-        "total_amount": 2649.97,
+        "total_amount": 149.99,
         "created_at": "2025-01-01T00:00:00.000Z",
         "updated_at": "2025-01-01T00:00:00.000Z",
         "user_name": "john.doe",
@@ -706,7 +814,16 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 ### List Categories
 - **Route**: `GET /categories`
 - **Access**: Private (admin, manager)
-- **Description**: List all categories
+- **Description**: List categories with optional filters
+
+**Query Parameters**:
+```json
+{
+    "limit": 10,              // Optional: Limit number of results
+    "date_from": "2025-01-01", // Optional: Filter from date
+    "date_to": "2025-12-31"    // Optional: Filter to date
+}
+```
 
 **Response**:
 ```json
