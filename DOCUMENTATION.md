@@ -511,26 +511,38 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 **Response**:
 ```json
 {
-    "id": 1,
-    "user_name": "admin",
-    "status": "pending",
-    "total_amount": 2649.97,
-    "created_at": "2025-02-23 15:04:22",
-    "updated_at": "2025-02-23 15:04:22",
+    "id": "3",
+    "user_id": "1",
+    "order_date": "2021-01-01T00:00:00.000Z",
+    "status": "processing",
+    "total_amount": "2649.97",
+    "created_at": "2021-01-01T00:00:00.000Z",
+    "updated_at": "2021-01-01T00:00:00.000Z",
+    "user_name": "john.doe",
     "items": [
         {
-            "id": 1,
+            "id": "1",
+            "order_id": "3",
+            "product_id": "1",
+            "quantity": "2",
+            "unit_price": "1299.99",
+            "created_at": "2021-01-01T00:00:00.000Z",
+            "updated_at": "2021-01-01T00:00:00.000Z",
             "product_name": "Laptop Dell XPS 13",
-            "sku": "ELEC-LAP-1740092136",
-            "quantity": 2,
-            "unit_price": 1299.99
+            "product_sku": "ELEC-LAP-1740092136",
+            "current_price": "1299.99"
         },
         {
-            "id": 2,
+            "id": "2",
+            "order_id": "3",
+            "product_id": "2",
+            "quantity": "1",
+            "unit_price": "49.99",
+            "created_at": "2021-01-01T00:00:00.000Z",
+            "updated_at": "2021-01-01T00:00:00.000Z",
             "product_name": "The Art of Programming",
-            "sku": "BOOK-THE-1740092136",
-            "quantity": 1,
-            "unit_price": 49.99
+            "product_sku": "BOOK-THE-1740092136",
+            "current_price": "49.99"
         }
     ]
 }
