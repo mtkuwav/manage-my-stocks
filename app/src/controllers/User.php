@@ -4,7 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\Controller;
 use App\Models\UserModel;
-use App\Utils\{Route, HttpException, JWT};
+use App\Utils\{Route, HttpException};
 use App\Middlewares\AuthMiddleware;
 
 class User extends Controller {

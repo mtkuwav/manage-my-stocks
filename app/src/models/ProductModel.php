@@ -179,7 +179,7 @@ class ProductModel extends SqlConnect {
     /**
      * Retrieves all products, optionally limited by a specified number.
      * 
-     * @param int|null $limit The maximum number of categories to retrieve (optional)
+     * @param int|null $limit The maximum number of products to retrieve (optional)
      * @return array An array of product data as associative arrays
      * @author Mathieu Chauvet
      */

@@ -22,17 +22,21 @@
    - [List Products](#list-products)
    - [Delete Product](#delete-product)
 
-4. [Categories](#categories)
+4. [Inventory Logs](#inventory-logs)
+   - [List logs](#list-logs-with-optional-limit)
+   - [Get A Log](#get-log)
+
+5. [Categories](#categories)
    - [Create Category](#create-category)
    - [Update Category](#update-category)
    - [Get Category](#get-category)
    - [List Categories](#list-categories)
    - [Delete Category](#delete-category)
 
-5. [Error Handling](#error-handling)
+6. [Error Handling](#error-handling)
    - [Error Responses](#error-responses)
 
-6. [Security Information](#security-information)
+7. [Security Information](#security-information)
    - [Token Security](#token-security)
 
 ## **IMPORTANT NOTE**
@@ -236,10 +240,10 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 }
 ```
 
-### Get All Users Profile (with optional limit)
-- **Route**: `GET /users`
+### List Users Profile (with optional limit)
+- **Route**: `GET /users` (add `?limit=[the limit you want]` if you want limited results)
 - **Access**: Private (Admin users)
-- **Description**: Retrieve the profile of all users in an array
+- **Description**: Retrieve the profile of all users in an array or the number of them specified
 
 **Response**:
 ```json
@@ -383,10 +387,10 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 }
 ```
 
-### List Products
-- **Route**: `GET /products`
+### List Products (with optional limit)
+- **Route**: `GET /products` (add `?limit=[the limit you want]` if you want limited results)
 - **Access**: Private (admin, manager)
-- **Description**: List all products (with optional limit)
+- **Description**: List all products or the number of products specified
 
 **Response**:
 ```json
@@ -415,6 +419,63 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 ```json
 {
     "message": "Product deleted successfully"
+}
+```
+
+## Inventory Logs
+
+### List Logs (with optional limit)
+
+- **Route**: `GET /inventory-logs` (add `?limit=[the limit you want]` if you want limited results)
+- **Access**: Private (Admin and manager users)
+- **Description**: Retrieve the profile of all users in an array or the number of them specified
+
+**Response**:
+```json
+[
+    {
+        "id": "1",
+        "product_id": "1",
+        "old_quantity": "0",
+        "new_quantity": "10",
+        "change_type": "initial",
+        "created_at": "2021-01-01T00:00:00.000Z",
+        "username": "john.doe",
+        "product_name": "Product name",
+        "product_sku": "PROD-DES-0000000000"
+    },
+    {
+        "id": "2",
+        "product_id": "2",
+        "old_quantity": "0",
+        "new_quantity": "25",
+        "change_type": "initial",
+        "created_at": "2021-01-01T00:00:00.000Z",
+        "username": "john.doe",
+        "product_name": "Another product name",
+        "product_sku": "PROD-DES-0000000001"
+    },
+    // etc.
+]
+```
+
+### Get Log
+- **Route**: `GET /inventory-logs/{id}`
+- **Access**: Private (admin, manager)
+- **Description**: Retrieve a single log details
+
+**Response**:
+```json
+{
+    "id": "1",
+    "product_id": "1",
+    "old_quantity": "0",
+    "new_quantity": "10",
+    "change_type": "initial",
+    "created_at": "2021-01-01T00:00:00.000Z",
+    "username": "john.doe",
+    "product_name": "Product name",
+    "product_sku": "PROD-DES-0000000000"
 }
 ```
 
