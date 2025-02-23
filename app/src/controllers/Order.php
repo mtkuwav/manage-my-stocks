@@ -42,6 +42,28 @@ class Order extends Controller {
     // └────────────────────────────────┘
 
     /**
+     * Get order statistics
+     * 
+     * @return array Order statistics including total orders, revenue, and other metrics
+     * @throws HttpException if there's an error retrieving statistics
+     * @author Mathieu Chauvet
+     */
+    #[Route("GET", "/orders/statistics", middlewares: [AuthMiddleware::class], allowedRoles: ['admin'])]
+    public function getOrderStatistics() {
+        try {
+            $filters = [
+                'status' => $this->query['status'] ?? null,
+                'date_from' => $this->query['date_from'] ?? null,
+                'date_to' => $this->query['date_to'] ?? null
+            ];
+
+            return $this->order->getStatistics(array_filter($filters));
+        } catch (HttpException $e) {
+            throw $e;
+        }
+    }
+
+    /**
      * Get a specific order by ID.
      *
      * @return array The order data
@@ -53,6 +75,28 @@ class Order extends Controller {
         try {
             $id = intval($this->params['id']);
             return $this->order->getById($id);
+        } catch (HttpException $e) {
+            throw $e;
+        }
+    }
+
+    /**
+     * Get all orders with optional filtering
+     * 
+     * @return array Array of all orders matching the applied filters
+     * @throws HttpException if there's an error retrieving orders
+     * @author Mathieu Chauvet
+     */
+    #[Route("GET", "/orders", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
+    public function getAllOrders() {
+        try {
+            $filters = [
+                'status' => $this->query['status'] ?? null,
+                'user_id' => $this->query['user_id'] ?? null,
+                'date_from' => $this->query['date_from'] ?? null,
+                'date_to' => $this->query['date_to'] ?? null
+            ];
+            return $this->order->getAll(array_filter($filters));
         } catch (HttpException $e) {
             throw $e;
         }
@@ -78,6 +122,22 @@ class Order extends Controller {
                 throw new HttpException("Status is required", 400);
             }
             return $this->order->updateStatus($id, $this->body['status']);
+        } catch (HttpException $e) {
+            throw $e;
+        }
+    }
+
+    /**
+     * Cancel an order and restore product stock quantities
+     * 
+     * @return array The cancelled order data
+     * @throws HttpException if order cancellation fails
+     */
+    #[Route("POST", "/orders/:id/cancel", middlewares: [AuthMiddleware::class], allowedRoles: ['admin'])]
+    public function cancelOrder() {
+        try {
+            $id = intval($this->params['id']);
+            return $this->order->cancelOrder($id);
         } catch (HttpException $e) {
             throw $e;
         }

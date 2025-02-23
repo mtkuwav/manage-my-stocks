@@ -4,9 +4,12 @@ namespace App\Models;
 
 use App\Models\SqlConnect;
 use App\Utils\HttpException;
+use App\Traits\FilterableTrait;
 use PDO;
 
 class OrderModel extends SqlConnect {
+    use FilterableTrait;
+
     private string $ordersTable = 'orders';
     private string $orderItemsTable = 'order_items';
 
@@ -45,8 +48,7 @@ class OrderModel extends SqlConnect {
             
             try {
                 $totalAmount = $this->validateAndCalculateItems($orderData['items']);
-                
-                // Create order
+
                 $stmt = $this->db->prepare(
                     "INSERT INTO $this->ordersTable 
                     (user_id, total_amount, status) 
@@ -116,6 +118,58 @@ class OrderModel extends SqlConnect {
         return $order;
     }
 
+    /**
+     * Get all orders with optional filters
+     * 
+     * @param array|null $filters Optional filters to apply (status, user_id, date_from, date_to)
+     * @return array Array of orders matching the filters
+     * @author Mathieu Chauvet
+     */
+    public function getAll(?array $filters = null) {
+        $query = "SELECT o.*, u.username as user_name 
+                FROM $this->ordersTable o
+                LEFT JOIN users u ON o.user_id = u.id";
+
+        $filterData = $this->buildFilterConditions($filters, 'o');
+            
+        if (!empty($filterData['conditions'])) {
+            $query .= " WHERE " . implode(" AND ", $filterData['conditions']);
+        }
+        
+        $query .= " ORDER BY o.created_at DESC";
+        
+        $stmt = $this->db->prepare($query);
+        $stmt->execute($filterData['params']);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get order statistics with optional filters
+     * 
+     * @param array|null $filters Optional filters to apply (date range, status, etc.)
+     * @return array Statistics including total orders, revenue, completed/cancelled orders, and average order value
+     * @author Mathieu Chauvet
+     */
+    public function getStatistics(?array $filters = null): array {
+        $query = "SELECT 
+                    COUNT(*) as total_orders,
+                    SUM(total_amount) as total_revenue,
+                    COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_orders,
+                    COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_orders,
+                    AVG(total_amount) as average_order_value
+                FROM $this->ordersTable o";
+
+        $filterData = $this->buildFilterConditions($filters, 'o');
+                
+        if (!empty($filterData['conditions'])) {
+            $query .= " WHERE " . implode(" AND ", $filterData['conditions']);
+        }
+
+        $stmt = $this->db->prepare($query);
+        $stmt->execute($filterData['params']);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
 
     // ┌──────────────────────────────────┐
     // | -------- UPDATE METHODS -------- |
@@ -131,6 +185,12 @@ class OrderModel extends SqlConnect {
      * @author Mathieu Chauvet
      */
     public function updateStatus(int $id, string $status) {
+        $currentOrder = $this->getById($id);
+    
+        if ($currentOrder['status'] === 'cancelled') {
+            throw new HttpException("Cannot update status of cancelled order", 400);
+        }
+
         if (!array_key_exists($status, $this->validOrderStatuses)) {
             throw new HttpException("Invalid status", 400);
         }
@@ -143,6 +203,67 @@ class OrderModel extends SqlConnect {
         }
 
         return $this->getById($id);
+    }
+
+    /**
+     * Cancel an order and restore product stock quantities
+     * 
+     * @param int $id The ID of the order to cancel
+     * @return array The cancelled order data
+     * @throws HttpException If order is not found or cancellation fails
+     * @author Mathieu Chauvet
+     */
+    public function cancelOrder(int $id): array {
+        try {    
+            // 1. Get order and verify status
+            $order = $this->getById($id);
+            if ($order['status'] === 'cancelled') {
+                throw new HttpException("Order is already cancelled", 400);
+            }
+    
+            // 2. Update order status
+            $stmt = $this->db->prepare(
+                "UPDATE $this->ordersTable SET status = 'cancelled' WHERE id = ?"
+            );
+            $stmt->execute([$id]);
+    
+            // 3. Restore stock for each item
+            foreach ($order['items'] as $item) {
+                // Get current stock
+                $stmt = $this->db->prepare("SELECT quantity_in_stock FROM products WHERE id = ?");
+                $stmt->execute([$item['product_id']]);
+                $currentStock = (int)$stmt->fetch(PDO::FETCH_COLUMN);
+    
+                // Calculate and update new stock
+                $newStock = $currentStock + $item['quantity'];
+                $stmt = $this->db->prepare(
+                    "UPDATE products 
+                    SET quantity_in_stock = :new_quantity 
+                    WHERE id = :product_id"
+                );
+                
+                $stmt->execute([
+                    'new_quantity' => $newStock,
+                    'product_id' => $item['product_id']
+                ]);
+    
+                // Verify update
+                $stmt = $this->db->prepare("SELECT quantity_in_stock FROM products WHERE id = ?");
+                $stmt->execute([$item['product_id']]);
+                $updatedStock = (int)$stmt->fetch(PDO::FETCH_COLUMN);
+    
+                if ($updatedStock !== $newStock) {
+                    throw new HttpException(
+                        "Stock restoration failed for product {$item['product_id']}. " .
+                        "Expected: $newStock, Got: $updatedStock", 
+                        500
+                    );
+                }
+            }
+            return $this->getById($id);
+        } catch (\Exception $e) {
+            throw new HttpException("Failed to cancel order: " . $e->getMessage(), 500);
+        }
     }
 
 
@@ -222,22 +343,17 @@ class OrderModel extends SqlConnect {
      * @author Mathieu Chauvet
      */
     private function createOrderItems(int $orderId, array|object $items): void {
-        // Convert items to array if it's an object
         $itemsArray = is_object($items) ? json_decode(json_encode($items), true) : $items;
         
         foreach ($itemsArray as $item) {
-            // Convert item to array if it's an object
             $itemData = is_object($item) ? json_decode(json_encode($item), true) : $item;
 
-            // Get current product price
             $stmt = $this->db->prepare("SELECT price FROM products WHERE id = ?");
             $stmt->execute([$itemData['product_id']]);
             $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Insert order item
             $this->insertOrderItem($orderId, $itemData, $product['price']);
 
-            // Update stock
             $this->updateProductStock($itemData['product_id'], $itemData['quantity']);
         }
     }
