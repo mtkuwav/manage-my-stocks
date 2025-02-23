@@ -15,6 +15,11 @@ class Order extends Controller {
         $this->order = new OrderModel();
     }
 
+
+    // ┌──────────────────────────────────┐
+    // | -------- CREATE METHODS -------- |
+    // └──────────────────────────────────┘
+
     /**
      * Create a new order.
      * 
@@ -31,8 +36,17 @@ class Order extends Controller {
         }
     }
 
+
+    // ┌────────────────────────────────┐
+    // | -------- READ METHODS -------- |
+    // └────────────────────────────────┘
+
     /**
-     * Get order by ID
+     * Get a specific order by ID.
+     *
+     * @return array The order data
+     * @throws HttpException if order not found
+     * @author Mathieu Chauvet
      */
     #[Route("GET", "/orders/:id", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
     public function getOrder() {
@@ -44,8 +58,17 @@ class Order extends Controller {
         }
     }
 
+
+    // ┌──────────────────────────────────┐
+    // | -------- UPDATE METHODS -------- |
+    // └──────────────────────────────────┘
+
     /**
-     * Update order status
+     * Update order status.
+     *
+     * @throws HttpException if status is missing or update fails
+     * @return array The updated order data
+     * @author Mathieu Chauvet
      */
     #[Route("PATCH", "/orders/:id/status", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
     public function updateOrderStatus() {
