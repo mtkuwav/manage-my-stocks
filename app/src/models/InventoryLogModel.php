@@ -22,6 +22,7 @@ class InventoryLogModel extends SqlConnect {
         'deletion' => 'Product deletion'
     ];
 
+
     // ┌────────────────────────────────┐
     // | -------- READ METHODS -------- |
     // └────────────────────────────────┘
@@ -131,33 +132,9 @@ class InventoryLogModel extends SqlConnect {
     }
 
 
-    /**
-     * Get the description for a given change type
-     *
-     * @param string $type The type of change to get description for
-     * @return string|null The description of the change type, or null if type is invalid
-     * @author Mathieu Chauvet
-     */
-    public function getChangeTypeDescription(string $type) {
-        return $this->validChangeTypes[$type] ?? null;
-    }
-
-    /**
-     * Validate that the given change type is allowed
-     *
-     * @param string $type The type of change to validate
-     * @throws HttpException If the change type is invalid
-     * @return void
-     * @author Mathieu Chauvet
-     */
-    private function validateChangeType(string $type) {
-        if (!array_key_exists($type, $this->validChangeTypes)) {
-            throw new HttpException(
-                "Invalid change type. Must be one of: " . implode(', ', array_keys($this->validChangeTypes)), 
-                400
-            );
-        }
-    }
+    // ┌────────────────────────────────┐
+    // | -------- CORE METHODS -------- |
+    // └────────────────────────────────┘
 
     /**
      * Log a change in product inventory
@@ -207,6 +184,39 @@ class InventoryLogModel extends SqlConnect {
 
         } catch (\PDOException $e) {
             throw new HttpException("Database error: " . $e->getMessage(), 500);
+        }
+    }
+
+
+    // ┌──────────────────────────────────┐
+    // | -------- HELPER METHODS -------- |
+    // └──────────────────────────────────┘
+
+    /**
+     * Get the description for a given change type
+     *
+     * @param string $type The type of change to get description for
+     * @return string|null The description of the change type, or null if type is invalid
+     * @author Mathieu Chauvet
+     */
+    public function getChangeTypeDescription(string $type) {
+        return $this->validChangeTypes[$type] ?? null;
+    }
+
+    /**
+     * Validate that the given change type is allowed
+     *
+     * @param string $type The type of change to validate
+     * @throws HttpException If the change type is invalid
+     * @return void
+     * @author Mathieu Chauvet
+     */
+    private function validateChangeType(string $type) {
+        if (!array_key_exists($type, $this->validChangeTypes)) {
+            throw new HttpException(
+                "Invalid change type. Must be one of: " . implode(', ', array_keys($this->validChangeTypes)), 
+                400
+            );
         }
     }
 
