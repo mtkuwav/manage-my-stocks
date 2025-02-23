@@ -55,19 +55,15 @@ class InventoryLog extends Controller {
     #[Route("GET", "/inventory-logs", middlewares: [AuthMiddleware::class], allowedRoles:['admin', 'manager'])]
     public function getLogs() {
         try {
-            $limit = isset($this->params['limit']) ? intval($this->params['limit']) : null;
-
-            if ($limit !== null && $limit <= 0) {
-                throw new HttpException("Limit must be a positive number", 400);
-            }
-
-            $logs = $this->log->getAll($limit);
-
-            if (empty($logs)) {
-                return [];
-            }
-
-            return $logs;
+            $filters = [
+                'date_from' => $this->query['date_from'] ?? null,
+                'date_to' => $this->query['date_to'] ?? null,
+                'limit' => $this->query['limit'] ?? null,
+                'change_type' => $this->query['change_type'] ?? null,
+                'product_id' => $this->query['product_id'] ?? null
+            ];
+    
+            return $this->log->getAll(array_filter($filters));
         } catch (HttpException $e) {
             throw $e;
         } catch (\Exception $e) {

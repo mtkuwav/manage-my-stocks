@@ -53,6 +53,7 @@ class Order extends Controller {
         try {
             $filters = [
                 'status' => $this->query['status'] ?? null,
+                'user_id' => $this->query['user_id'] ?? null,
                 'date_from' => $this->query['date_from'] ?? null,
                 'date_to' => $this->query['date_to'] ?? null
             ];
@@ -94,8 +95,14 @@ class Order extends Controller {
                 'status' => $this->query['status'] ?? null,
                 'user_id' => $this->query['user_id'] ?? null,
                 'date_from' => $this->query['date_from'] ?? null,
-                'date_to' => $this->query['date_to'] ?? null
+                'date_to' => $this->query['date_to'] ?? null,
+                'limit' => isset($this->query['limit']) ?? null
             ];
+
+            if (isset($filters['limit'])) {
+                $filters['limit'] = (int)$filters['limit'];
+            }
+            
             return $this->order->getAll(array_filter($filters));
         } catch (HttpException $e) {
             throw $e;

@@ -136,7 +136,7 @@ class OrderModel extends SqlConnect {
             $query .= " WHERE " . implode(" AND ", $filterData['conditions']);
         }
         
-        $query .= " ORDER BY o.created_at DESC";
+        $query .= " ORDER BY o.created_at DESC" . $filterData['limit'];
         
         $stmt = $this->db->prepare($query);
         $stmt->execute($filterData['params']);

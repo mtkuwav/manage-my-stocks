@@ -56,19 +56,13 @@ class User extends Controller {
     #[Route("GET", "/users", middlewares: [AuthMiddleware::class], allowedRoles:['admin'])]
     public function getUsers() {
         try {
-            $limit = isset($this->params['limit']) ? intval($this->params['limit']) : null;
-
-            if ($limit !== null && $limit <= 0) {
-                throw new HttpException("Limit must be a positive number", 400);
-            }
-
-            $users = $this->user->getAll($limit);
-
-            if (empty($users)) {
-                return [];
-            }
-
-            return $users;
+            $filters = [
+                'date_from' => $this->query['date_from'] ?? null,
+                'date_to' => $this->query['date_to'] ?? null,
+                'limit' => $this->query['limit'] ?? null
+            ];
+            
+            return $this->user->getAll(array_filter($filters));
         } catch (HttpException $e) {
             throw $e;
         } catch (\Exception $e) {

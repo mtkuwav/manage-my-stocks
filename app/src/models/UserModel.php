@@ -5,8 +5,11 @@ namespace App\Models;
 use \PDO;
 use stdClass;
 use App\Utils\HttpException;
+use App\Traits\FilterableTrait;
 
 class UserModel extends SqlConnect {
+    use FilterableTrait;
+
     private string $userTable = 'users';
     private string $refreshTokenTable = 'refresh_tokens';
     public $authorized_fields_to_update = ['username', 'email', 'role'];
@@ -43,31 +46,26 @@ class UserModel extends SqlConnect {
     /**
      * Retrieves all users, optionally limited by a specified number.
      * 
-     * @param int|null $limit The maximum number of users to retrieve (optional)
+     * @param array|null $filters Optional array of filters to apply to the query. Can include conditions for any user fields.
      * @return array An array of user data as associative arrays
      * @author Rémis Rubis, Mathieu Chauvet
      */
-    public function getAll(?int $limit = null) {
+    public function getAll(?array $filters = null) {
         try {
-            $query = "SELECT * FROM {$this->userTable}";
+            $query = "SELECT * FROM {$this->userTable} u";
             
-            if ($limit !== null) {
-                if ($limit <= 0) {
-                    throw new HttpException("Limit must be a positive number", 400);
-                }
-                $query .= " LIMIT :limit";
-                $params = [':limit' => (int)$limit];
-            } else {
-                $params = [];
+            $filterData = $this->buildFilterConditions($filters, 'u');
+            
+            if (!empty($filterData['conditions'])) {
+                $query .= " WHERE " . implode(" AND ", $filterData['conditions']);
             }
             
-            $req = $this->db->prepare($query);
-            foreach ($params as $key => $value) {
-                $req->bindValue($key, $value, PDO::PARAM_INT);
-            }
-            $req->execute();
+            $query .= " ORDER BY u.created_at DESC" . $filterData['limit'];
             
-            $users = $req->fetchAll(PDO::FETCH_ASSOC);
+            $stmt = $this->db->prepare($query);
+            $stmt->execute($filterData['params']);
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
             return array_map([$this, 'removeSensitiveData'], $users);
         } catch (\PDOException $e) {
             throw new HttpException("Database error: " . $e->getMessage(), 500);

@@ -4,10 +4,13 @@ namespace App\Models;
 
 use App\Models\SqlConnect;
 use App\Utils\HttpException;
+use App\Traits\FilterableTrait;
 use \stdClass;
 use \PDO;
 
 class InventoryLogModel extends SqlConnect {
+    use FilterableTrait;
+
     private string $table = "inventory_logs";
     
     /**
@@ -66,34 +69,29 @@ class InventoryLogModel extends SqlConnect {
     /**
      * Retrieves all logs, optionally limited by a specified number.
      * 
-     * @param int|null $limit The maximum number of logs to retrieve (optional)
+     * @param array|null $filters Optional array of filters to apply to the query. Can include conditions for any user fields.
      * @return array An array of log data as associative arrays
      * @author Mathieu Chauvet
      */
-    public function getAll(?int $limit = null) {
+    public function getAll(?array $filters = null) {
         try {
             $query = "SELECT l.*, u.username, p.name as product_name, p.sku as product_sku
                     FROM {$this->table} l 
                     LEFT JOIN users u ON l.user_id = u.id
                     LEFT JOIN products p ON l.product_id = p.id";
             
-            if ($limit !== null) {
-                if ($limit <= 0) {
-                    throw new HttpException("Limit must be a positive number", 400);
-                }
-                $query .= " LIMIT :limit";
-                $params = [':limit' => (int)$limit];
-            } else {
-                $params = [];
+            $filterData = $this->buildFilterConditions($filters, 'l');
+            
+            if (!empty($filterData['conditions'])) {
+                $query .= " WHERE " . implode(" AND ", $filterData['conditions']);
             }
             
-            $req = $this->db->prepare($query);
-            foreach ($params as $key => $value) {
-                $req->bindValue($key, $value, PDO::PARAM_INT);
-            }
-            $req->execute();
+            $query .= " ORDER BY l.created_at DESC" . $filterData['limit'];
             
-            $logs = $req->fetchAll(PDO::FETCH_ASSOC);
+            $stmt = $this->db->prepare($query);
+            $stmt->execute($filterData['params']);
+            
+            $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
             return array_map([$this, 'formatLogWithUsername'], $logs);
         }  catch (HttpException $e) {
             throw $e;

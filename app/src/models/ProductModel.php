@@ -4,12 +4,13 @@ namespace App\Models;
 
 use App\Models\{SqlConnect, InventoryLogModel};
 use App\Utils\{HttpException, JWT};
-use App\Traits\StockManagementTrait;
+use App\Traits\{StockManagementTrait, FilterableTrait};
 use \stdClass;
 use \PDO;
 
 class ProductModel extends SqlConnect {
     use StockManagementTrait;
+    use FilterableTrait;
 
     private InventoryLogModel $inventoryLog;
     
@@ -179,31 +180,26 @@ class ProductModel extends SqlConnect {
     /**
      * Retrieves all products, optionally limited by a specified number.
      * 
-     * @param int|null $limit The maximum number of products to retrieve (optional)
+     * @param array|null $filters Optional array of filters to apply to the query. Can include conditions for any user fields.
      * @return array An array of product data as associative arrays
      * @author Mathieu Chauvet
      */
-    public function getAll(?int $limit = null) {
+    public function getAll(?array $filters = null) {
         try {
-            $query = "SELECT * FROM {$this->tableProducts}";
+            $query = "SELECT * FROM {$this->tableProducts} p";
             
-            if ($limit !== null) {
-                if ($limit <= 0) {
-                    throw new HttpException("Limit must be a positive number", 400);
-                }
-                $query .= " LIMIT :limit";
-                $params = [':limit' => (int)$limit];
-            } else {
-                $params = [];
+            $filterData = $this->buildFilterConditions($filters, 'p');
+            
+            if (!empty($filterData['conditions'])) {
+                $query .= " WHERE " . implode(" AND ", $filterData['conditions']);
             }
             
-            $req = $this->db->prepare($query);
-            foreach ($params as $key => $value) {
-                $req->bindValue($key, $value, PDO::PARAM_INT);
-            }
-            $req->execute();
+            $query .= " ORDER BY p.created_at DESC";
             
-            return $req->fetchAll(PDO::FETCH_ASSOC);
+            $stmt = $this->db->prepare($query);
+            $stmt->execute($filterData['params']);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         }  catch (HttpException $e) {
             throw $e;
