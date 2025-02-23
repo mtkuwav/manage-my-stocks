@@ -243,10 +243,8 @@ class ProductModel extends SqlConnect {
      */
     public function update(array $data, int $id) {
         try {
-            // Vérifier si le produit existe AVANT la transaction
             $currentProduct = $this->getById($id);
-            
-            // Préparer toutes les données AVANT la transaction
+
             $fields = [];
             $params = [];
             foreach ($data as $key => $value) {
@@ -263,7 +261,6 @@ class ProductModel extends SqlConnect {
                 );
             }
 
-            // Toutes les validations AVANT la transaction
             if (isset($data['name']) && empty(trim($data['name']))) {
                 throw new HttpException("Product name cannot be empty", 400);
             }
@@ -276,18 +273,15 @@ class ProductModel extends SqlConnect {
                 $this->validatePrice($data['price']);
             }
 
-            // Début de la transaction optimisée
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
             try {
-                // Mise à jour du produit
                 $query = "UPDATE $this->tableProducts SET " . implode(", ", $fields) . " WHERE id = :id";
                 $params[':id'] = $id;
                 
                 $stmt = $this->db->prepare($query);
                 $stmt->execute($params);
 
-                // Log de l'inventaire si nécessaire
                 if (isset($data['quantity_in_stock']) && $data['quantity_in_stock'] != $currentProduct['quantity_in_stock']) {
                     $token = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
                     $token = str_replace('Bearer ', '', $token);
@@ -329,16 +323,13 @@ class ProductModel extends SqlConnect {
      */
     public function delete(int $id): bool {
         try {
-            // Récupérer le produit avant suppression
             $product = $this->getById($id);
             
             try {
-                // Logger le changement de stock
                 $token = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
                 $token = str_replace('Bearer ', '', $token);
                 $payload = JWT::decryptToken($token);
-                
-                // Log avant suppression
+
                 $this->inventoryLog->logChange(
                     $id,
                     $payload['user_id'] ?? null,
@@ -347,7 +338,6 @@ class ProductModel extends SqlConnect {
                     'deletion'
                 );
 
-                // Supprimer le produit (les logs seront supprimés en cascade)
                 $stmt = $this->db->prepare("DELETE FROM $this->tableProducts WHERE id = :id");
                 $success = $stmt->execute(['id' => $id]);
                 

@@ -22,21 +22,29 @@
    - [List Products](#list-products)
    - [Delete Product](#delete-product)
 
-4. [Inventory Logs](#inventory-logs)
+4. [Orders](#orders)
+   - [Create Order](#create-order)
+   - [Get Order](#get-order)
+   - [Get All Orders](#get-all-orders)
+   - [Get Order Statistics](#get-order-statistics)
+   - [Update Order Status](#update-order-status)
+   - [Cancel Order](#cancel-order)
+
+5. [Inventory Logs](#inventory-logs)
    - [List logs](#list-logs-with-optional-limit)
    - [Get A Log](#get-log)
 
-5. [Categories](#categories)
+6. [Categories](#categories)
    - [Create Category](#create-category)
    - [Update Category](#update-category)
    - [Get Category](#get-category)
    - [List Categories](#list-categories)
    - [Delete Category](#delete-category)
 
-6. [Error Handling](#error-handling)
+7. [Error Handling](#error-handling)
    - [Error Responses](#error-responses)
 
-7. [Security Information](#security-information)
+8. [Security Information](#security-information)
    - [Token Security](#token-security)
 
 ## **IMPORTANT NOTE**
@@ -478,6 +486,163 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
     "product_sku": "PROD-DES-0000000000"
 }
 ```
+
+## Orders
+
+### Create Order
+- **Route**: `POST /orders`
+- **Access**: Private (admin, manager)
+- **Description**: Create a new order and update product stock accordingly
+
+**Request**:
+```json
+{
+    "user_id": 1,
+    "items": [
+        {
+            "product_id": 1,
+            "quantity": 2
+        },
+        {
+            "product_id": 2,
+            "quantity": 1
+        }
+    ]
+}
+```
+
+**Response**:
+```json
+{
+    "id": "3",
+    "user_id": "1",
+    "order_date": "2021-01-01T00:00:00.000Z",
+    "status": "processing",
+    "total_amount": "2649.97",
+    "created_at": "2021-01-01T00:00:00.000Z",
+    "updated_at": "2021-01-01T00:00:00.000Z",
+    "user_name": "john.doe",
+    "items": [
+        {
+            "id": "1",
+            "order_id": "3",
+            "product_id": "1",
+            "quantity": "2",
+            "unit_price": "1299.99",
+            "created_at": "2021-01-01T00:00:00.000Z",
+            "updated_at": "2021-01-01T00:00:00.000Z",
+            "product_name": "Laptop Dell XPS 13",
+            "product_sku": "ELEC-LAP-1740092136",
+            "current_price": "1299.99"
+        },
+        {
+            "id": "2",
+            "order_id": "3",
+            "product_id": "2",
+            "quantity": "1",
+            "unit_price": "49.99",
+            "created_at": "2021-01-01T00:00:00.000Z",
+            "updated_at": "2021-01-01T00:00:00.000Z",
+            "product_name": "The Art of Programming",
+            "product_sku": "BOOK-THE-1740092136",
+            "current_price": "49.99"
+        }
+    ]
+}
+```
+
+### Get Order
+- **Route**: `GET /orders/{id}`
+- **Access**: Private (admin, manager)
+- **Description**: Retrieve order details with its items
+
+**Response**: Same as create order response
+
+### Get All Orders
+- **Route**: `GET /orders`
+- **Access**: Private (admin, manager)
+- **Description**: Get all orders with optional filters
+
+**Query Parameters**:
+```json
+{
+    "status": "pending",        // Optional: Filter by order status
+    "user_id": 1,              // Optional: Filter by user
+    "date_from": "2025-01-01", // Optional: Filter from date
+    "date_to": "2025-12-31"    // Optional: Filter to date
+}
+```
+
+**Response**:
+```json
+[
+    {
+        "id": 1,
+        "user_id": 1,
+        "status": "pending",
+        "total_amount": 2649.97,
+        "created_at": "2025-01-01T00:00:00.000Z",
+        "updated_at": "2025-01-01T00:00:00.000Z",
+        "user_name": "john.doe",
+        "items": [
+            // ... items array
+        ]
+    }
+    // ... more orders
+]
+```
+
+### Get Order Statistics
+- **Route**: `GET /orders/statistics`
+- **Access**: Private (admin only)
+- **Description**: Get order statistics with optional filters
+
+**Query Parameters**:
+```json
+{
+    "status": "completed",     // Optional: Filter by status
+    "date_from": "2025-01-01", // Optional: From date
+    "date_to": "2025-12-31"    // Optional: To date
+}
+```
+
+**Response**:
+```json
+{
+    "total_orders": 50,
+    "total_revenue": 15000.00,
+    "completed_orders": 40,
+    "cancelled_orders": 5,
+    "average_order_value": 300.00
+}
+```
+
+### Update Order Status
+- **Route**: `PATCH /orders/{id}/status`
+- **Access**: Private (admin, manager)
+- **Description**: Update the status of an order
+
+**Request**:
+```json
+{
+    "status": "processing"
+}
+```
+
+**Available Statuses**:
+- `pending`: Order is awaiting processing
+- `processing`: Order is being processed
+- `completed`: Order has been completed
+- `cancelled`: Order has been cancelled
+
+**Response**: Same as create order response but with updated status
+
+### Cancel Order
+- **Route**: `POST /orders/{id}/cancel`
+- **Access**: Private (admin only)
+- **Description**: Cancel an order and restore product stock
+
+**Response**: Same as get order response but with status "cancelled"
 
 ## Categories
 
