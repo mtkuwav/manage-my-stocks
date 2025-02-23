@@ -5,8 +5,11 @@ namespace App\Models;
 use \PDO;
 use stdClass;
 use App\Utils\HttpException;
+use App\Traits\FilterableTrait;
 
 class UserModel extends SqlConnect {
+    use FilterableTrait;
+
     private string $userTable = 'users';
     private string $refreshTokenTable = 'refresh_tokens';
     public $authorized_fields_to_update = ['username', 'email', 'role'];
@@ -37,37 +40,33 @@ class UserModel extends SqlConnect {
             throw new HttpException("User not found", 404);
         }
     
-        return $user;
+        return $this->removeSensitiveData($user);
     }
 
     /**
      * Retrieves all users, optionally limited by a specified number.
      * 
-     * @param int|null $limit The maximum number of users to retrieve (optional)
+     * @param array|null $filters Optional array of filters to apply to the query. Can include conditions for any user fields.
      * @return array An array of user data as associative arrays
      * @author Rémis Rubis, Mathieu Chauvet
      */
-    public function getAll(?int $limit = null) {
+    public function getAll(?array $filters = null) {
         try {
-            $query = "SELECT * FROM {$this->userTable}";
+            $query = "SELECT * FROM {$this->userTable} u";
             
-            if ($limit !== null) {
-                if ($limit <= 0) {
-                    throw new HttpException("Limit must be a positive number", 400);
-                }
-                $query .= " LIMIT :limit";
-                $params = [':limit' => (int)$limit];
-            } else {
-                $params = [];
+            $filterData = $this->buildFilterConditions($filters, 'u');
+            
+            if (!empty($filterData['conditions'])) {
+                $query .= " WHERE " . implode(" AND ", $filterData['conditions']);
             }
             
-            $req = $this->db->prepare($query);
-            foreach ($params as $key => $value) {
-                $req->bindValue($key, $value, PDO::PARAM_INT);
-            }
-            $req->execute();
+            $query .= " ORDER BY u.created_at DESC" . $filterData['limit'];
             
-            return $req->fetchAll(PDO::FETCH_ASSOC);
+            $stmt = $this->db->prepare($query);
+            $stmt->execute($filterData['params']);
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            return array_map([$this, 'removeSensitiveData'], $users);
         } catch (\PDOException $e) {
             throw new HttpException("Database error: " . $e->getMessage(), 500);
         }
@@ -132,33 +131,6 @@ class UserModel extends SqlConnect {
     }
 
     /**
-     * Updates the password of a user.
-     *
-     * @param int $userId The ID of the user whose password is to be updated.
-     * @param string $newPassword The new password.
-     * @return bool True if the password was updated successfully, false otherwise.
-     * @throws HttpException If the update fails.
-     * @author Mathieu Chauvet
-     */
-    public function updatePassword(int $userId, string $newPassword) {
-        $saltedPassword = $newPassword . $this->passwordSalt;
-        $hashedPassword = password_hash($saltedPassword, PASSWORD_BCRYPT);
-
-        $query = "UPDATE $this->userTable SET password_hash = :password_hash WHERE id = :id";
-        $req = $this->db->prepare($query);
-        $success = $req->execute([
-            'password_hash' => $hashedPassword,
-            'id' => $userId
-        ]);
-
-        if (!$success) {
-            throw new HttpException("Failed to update password", 500);
-        }
-
-        return true;
-    }
-
-    /**
      * Promotes a user from manager role to admin role.
      * 
      * @param int $userId The ID of the user to promote
@@ -208,5 +180,22 @@ class UserModel extends SqlConnect {
         }
 
         return ["message" => "User successfully deleted"];
+    }
+
+
+    // ┌────────────────────────────────┐
+    // | -------- MISC METHODS -------- |
+    // └────────────────────────────────┘
+
+    /**
+     * Removes sensitive data (password hash) from user data.
+     * 
+     * @param array $user The user data array containing sensitive information
+     * @return array The user data array with sensitive information removed
+     * @author Mathieu Chauvet
+     */
+    private function removeSensitiveData(array $user) {
+        unset($user['password_hash']);
+        return $user;
     }
 }

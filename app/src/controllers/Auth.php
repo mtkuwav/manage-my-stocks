@@ -45,6 +45,57 @@ class Auth extends Controller {
     }
 
 
+    // ┌──────────────────────────────────┐
+    // | -------- UPDATE METHODS -------- |
+    // └──────────────────────────────────┘
+
+    /**
+     * Update the password of the authenticated user.
+     *
+     * @throws HttpException if the new password is missing or update fails
+     * @return array containing success message
+     * @author Mathieu Chauvet
+     */
+    #[Route("PATCH", "/auth/update-password", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
+    public function updateUserPassword() {
+        try {
+            $data = $this->body;
+
+            $token = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+            $token = str_replace('Bearer ', '', $token);
+            $payload = JWT::decryptToken($token);
+            $userId = $payload['user_id'] ?? null;
+
+            if (!$userId) {
+                throw new HttpException("Authentication required", 401);
+            }
+
+            if (empty($data['current_password'])) {
+                throw new HttpException("Current password is required", 400);
+            }
+
+            if (!$this->auth->verifyPassword($userId, $data['current_password'])) {
+                throw new HttpException("Current password is incorrect", 401);
+            }
+
+            if ($data['current_password'] === $data['new_password']) {
+                throw new HttpException("New password must be different from current password", 400);
+            }
+
+            if (empty($data['new_password'])) {
+                    throw new HttpException("New password is required.", 400);
+            }
+
+            $this->auth->updatePassword($userId, $data['new_password']);
+            return ["message" => "Password updated successfully"];
+        } catch (HttpException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            throw new HttpException($e->getMessage(), 500);
+        }
+    }
+
+
     // ┌────────────────────────────────┐
     // | -------- AUTH METHODS -------- |
     // └────────────────────────────────┘

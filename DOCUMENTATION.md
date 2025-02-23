@@ -1,6 +1,8 @@
 # API Documentation
 
 ## Table of Contents
+- [IMPORTANT](#important-note)
+- [Filters]
 1. [Authentication](#authentication)
    - [Register](#register)
    - [Login](#login)
@@ -22,17 +24,29 @@
    - [List Products](#list-products)
    - [Delete Product](#delete-product)
 
-4. [Categories](#categories)
+4. [Orders](#orders)
+   - [Create Order](#create-order)
+   - [Get Order](#get-order)
+   - [Get All Orders](#get-all-orders)
+   - [Get Order Statistics](#get-order-statistics)
+   - [Update Order Status](#update-order-status)
+   - [Cancel Order](#cancel-order)
+
+5. [Inventory Logs](#inventory-logs)
+   - [List logs](#list-logs-with-optional-limit)
+   - [Get A Log](#get-log)
+
+6. [Categories](#categories)
    - [Create Category](#create-category)
    - [Update Category](#update-category)
    - [Get Category](#get-category)
    - [List Categories](#list-categories)
    - [Delete Category](#delete-category)
 
-5. [Error Handling](#error-handling)
+7. [Error Handling](#error-handling)
    - [Error Responses](#error-responses)
 
-6. [Security Information](#security-information)
+8. [Security Information](#security-information)
    - [Token Security](#token-security)
 
 ## **IMPORTANT NOTE**
@@ -40,6 +54,87 @@ At first, the database will only contain one admin user so that this user can pr
 
 **email**: ``admin@boutique.com`` <br>
 **password**: ``adminpswd``
+
+## Filters
+
+The API supports filtering for list endpoints (GET methods returning multiple items). Filters can be combined to refine results.
+
+### Common Filters
+All list endpoints support these basic filters:
+```json
+{
+    "date_from": "2025-01-01",  // Filter items from this date
+    "date_to": "2025-12-31",    // Filter items up to this date
+    "limit": 10                 // Limit number of returned items
+}
+```
+
+### Resource-Specific Filters
+
+#### Orders
+```json
+{
+    "status": "pending",        // Filter by order status
+    "user_id": 1,              // Filter by user ID
+    "min_amount": 50.00,       // Minimum order amount
+    "max_amount": 200.00       // Maximum order amount
+}
+```
+
+#### Products
+```json
+{
+    "category_id": 1,          // Filter by category
+    "price_min": 10.00,        // Minimum price
+    "price_max": 100.00        // Maximum price
+}
+```
+
+#### Inventory Logs
+```json
+{
+    "change_type": "adjustment", // Filter by change type
+    "product_id": 1             // Filter by product ID
+}
+```
+
+#### Users
+```json
+{
+    "role": "manager",          // Filter by user role
+    "username": "john"          // Filter by username (partial match)
+}
+```
+
+### Usage Examples
+
+1. Get orders from last month with status 'pending':
+```
+GET /orders?date_from=2025-01-01&date_to=2025-01-31&status=pending
+```
+
+2. Get products in price range:
+```
+GET /products?price_min=10.00&price_max=100.00&limit=5
+```
+
+3. Get inventory logs for a specific product:
+```
+GET /inventory-logs?product_id=1&change_type=adjustment
+```
+
+4. Get manager users created this year:
+```
+GET /users?role=manager&date_from=2025-01-01
+```
+
+### Notes
+- All date filters must be in `YYYY-MM-DD` format
+- Price and amount filters must be decimal numbers
+- IDs must be integers
+- Text filters are case-insensitive
+- Multiple filters can be combined using `&`
+- Invalid or unknown filter parameters are ignored
 
 ## Authentication
 
@@ -178,6 +273,26 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 }
 ```
 
+### Update User Password
+- **Route**: `PATCH /auth/update-password`
+- **Access**: Private (Admin and manager users)
+- **Description**: Update the authenticated user's password based on its bearer token
+
+**Request**:
+```json
+{
+    "current_password": "current123",
+    "new_password": "new123"
+}
+```
+
+**Response**:
+```json
+{
+    "message": "Password updated successfully"
+}
+```
+
 ## Users
 
 ### Promote a manager user to admin role
@@ -216,10 +331,21 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 }
 ```
 
-### Get All Users Profile (with optional limit)
+### List Users Profile
 - **Route**: `GET /users`
 - **Access**: Private (Admin users)
-- **Description**: Retrieve the profile of all users in an array
+- **Description**: List users with optional filters
+
+**Query Parameters**:
+```json
+{
+    "limit": 10,              // Optional: Limit number of results
+    "date_from": "2025-01-01", // Optional: Filter from date
+    "date_to": "2025-12-31",   // Optional: Filter to date
+    "role": "manager",         // Optional: Filter by role
+    "username": "john"         // Optional: Filter by username (partial match)
+}
+```
 
 **Response**:
 ```json
@@ -227,7 +353,6 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
     {
         "id": 1,
         "username": "John Doe",
-        "password_hash": "$2y$10$fV3K74l...",
         "email": "john.doe@example.com",
         "role": "admin",
         "created_at": "2025-01-01T00:00:00.000Z",
@@ -236,7 +361,6 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
     {
         "id": 2,
         "username": "Alice Bob",
-        "password_hash": "$2y$10$fV3K74l...",
         "email": "alice.bob@example.com",
         "role": "manager",
         "created_at": "2025-01-01T00:00:00.000Z",
@@ -268,25 +392,6 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
     "role": "manager",
     "created_at": "2025-01-01T00:00:00.000Z",
     "updated_at": "2025-01-01T00:00:00.000Z"
-}
-```
-
-### Update User Password
-- **Route**: `PATCH /users/:id/update-password`
-- **Access**: Private (Admin users)
-- **Description**: Updates the password of an user
-
-**Request**:
-```json
-{
-    "new_password": "newpassword"
-}
-```
-
-**Response**:
-```json
-{
-    "message": "Password updated successfully"
 }
 ```
 
@@ -387,7 +492,19 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 ### List Products
 - **Route**: `GET /products`
 - **Access**: Private (admin, manager)
-- **Description**: List all products (with optional limit)
+- **Description**: List products with optional filters
+
+**Query Parameters**:
+```json
+{
+    "limit": 10,              // Optional: Limit number of results
+    "date_from": "2025-01-01", // Optional: Filter from date
+    "date_to": "2025-12-31",   // Optional: Filter to date
+    "category_id": 1,          // Optional: Filter by category
+    "price_min": 10.00,        // Optional: Minimum price
+    "price_max": 100.00        // Optional: Maximum price
+}
+```
 
 **Response**:
 ```json
@@ -418,6 +535,222 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
     "message": "Product deleted successfully"
 }
 ```
+
+## Inventory Logs
+
+### List Inventory Logs
+- **Route**: `GET /inventory-logs`
+- **Access**: Private (Admin and manager users)
+- **Description**: List inventory logs with optional filters
+
+**Query Parameters**:
+```json
+{
+    "limit": 10,              // Optional: Limit number of results
+    "date_from": "2025-01-01", // Optional: Filter from date
+    "date_to": "2025-12-31",   // Optional: Filter to date
+    "change_type": "initial",  // Optional: Filter by change type
+    "product_id": 1           // Optional: Filter by product ID
+}
+```
+
+**Response**:
+```json
+[
+    {
+        "id": "1",
+        "product_id": "1",
+        "old_quantity": "0",
+        "new_quantity": "10",
+        "change_type": "initial",
+        "created_at": "2021-01-01T00:00:00.000Z",
+        "username": "john.doe",
+        "product_name": "Product name",
+        "product_sku": "PROD-DES-0000000000"
+    },
+    // ...
+]
+```
+
+### Get Log
+- **Route**: `GET /inventory-logs/{id}`
+- **Access**: Private (admin, manager)
+- **Description**: Retrieve a single log details
+
+**Response**:
+```json
+{
+    "id": "1",
+    "product_id": "1",
+    "old_quantity": "0",
+    "new_quantity": "10",
+    "change_type": "initial",
+    "created_at": "2021-01-01T00:00:00.000Z",
+    "username": "john.doe",
+    "product_name": "Product name",
+    "product_sku": "PROD-DES-0000000000"
+}
+```
+
+## Orders
+
+### Create Order
+- **Route**: `POST /orders`
+- **Access**: Private (admin, manager)
+- **Description**: Create a new order and update product stock accordingly
+
+**Request**:
+```json
+{
+    "user_id": 1,
+    "items": [
+        {
+            "product_id": 1,
+            "quantity": 2
+        },
+        {
+            "product_id": 2,
+            "quantity": 1
+        }
+    ]
+}
+```
+
+**Response**:
+```json
+{
+    "id": "3",
+    "user_id": "1",
+    "order_date": "2021-01-01T00:00:00.000Z",
+    "status": "processing",
+    "total_amount": "2649.97",
+    "created_at": "2021-01-01T00:00:00.000Z",
+    "updated_at": "2021-01-01T00:00:00.000Z",
+    "user_name": "john.doe",
+    "items": [
+        {
+            "id": "1",
+            "order_id": "3",
+            "product_id": "1",
+            "quantity": "2",
+            "unit_price": "1299.99",
+            "created_at": "2021-01-01T00:00:00.000Z",
+            "updated_at": "2021-01-01T00:00:00.000Z",
+            "product_name": "Laptop Dell XPS 13",
+            "product_sku": "ELEC-LAP-1740092136",
+            "current_price": "1299.99"
+        },
+        {
+            "id": "2",
+            "order_id": "3",
+            "product_id": "2",
+            "quantity": "1",
+            "unit_price": "49.99",
+            "created_at": "2021-01-01T00:00:00.000Z",
+            "updated_at": "2021-01-01T00:00:00.000Z",
+            "product_name": "The Art of Programming",
+            "product_sku": "BOOK-THE-1740092136",
+            "current_price": "49.99"
+        }
+    ]
+}
+```
+
+### Get Order
+- **Route**: `GET /orders/{id}`
+- **Access**: Private (admin, manager)
+- **Description**: Retrieve order details with its items
+
+**Response**: Same as create order response
+
+### Get All Orders
+- **Route**: `GET /orders`
+- **Access**: Private (admin, manager)
+- **Description**: Get all orders with optional filters
+
+**Query Parameters**:
+```json
+{
+    "limit": 10,              // Optional: Limit number of results
+    "status": "pending",      // Optional: Filter by order status
+    "user_id": 1,            // Optional: Filter by user
+    "date_from": "2025-01-01", // Optional: Filter from date
+    "date_to": "2025-12-31",   // Optional: Filter to date
+    "min_amount": 50.00,      // Optional: Minimum order amount
+    "max_amount": 200.00      // Optional: Maximum order amount
+}
+```
+
+**Response**:
+```json
+[
+    {
+        "id": 1,
+        "user_id": 1,
+        "status": "pending",
+        "total_amount": 149.99,
+        "created_at": "2025-01-01T00:00:00.000Z",
+        "updated_at": "2025-01-01T00:00:00.000Z",
+        "user_name": "john.doe",
+        "items": [
+            // ... items array
+        ]
+    }
+    // ... more orders
+]
+```
+
+### Get Order Statistics
+- **Route**: `GET /orders/statistics`
+- **Access**: Private (admin only)
+- **Description**: Get order statistics with optional filters
+
+**Query Parameters**:
+```json
+{
+    "status": "completed",     // Optional: Filter by status
+    "date_from": "2025-01-01", // Optional: From date
+    "date_to": "2025-12-31"    // Optional: To date
+}
+```
+
+**Response**:
+```json
+{
+    "total_orders": 50,
+    "total_revenue": 15000.00,
+    "completed_orders": 40,
+    "cancelled_orders": 5,
+    "average_order_value": 300.00
+}
+```
+
+### Update Order Status
+- **Route**: `PATCH /orders/{id}/status`
+- **Access**: Private (admin, manager)
+- **Description**: Update the status of an order
+
+**Request**:
+```json
+{
+    "status": "processing"
+}
+```
+
+**Available Statuses**:
+- `pending`: Order is awaiting processing
+- `processing`: Order is being processed
+- `completed`: Order has been completed
+- `cancelled`: Order has been cancelled
+
+**Response**: Same as create order response but with updated status
+
+### Cancel Order
+- **Route**: `POST /orders/{id}/cancel`
+- **Access**: Private (admin only)
+- **Description**: Cancel an order and restore product stock
+
+**Response**: Same as get order response but with status "cancelled"
 
 ## Categories
 
@@ -481,7 +814,16 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 ### List Categories
 - **Route**: `GET /categories`
 - **Access**: Private (admin, manager)
-- **Description**: List all categories
+- **Description**: List categories with optional filters
+
+**Query Parameters**:
+```json
+{
+    "limit": 10,              // Optional: Limit number of results
+    "date_from": "2025-01-01", // Optional: Filter from date
+    "date_to": "2025-12-31"    // Optional: Filter to date
+}
+```
 
 **Response**:
 ```json

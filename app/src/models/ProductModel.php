@@ -4,12 +4,13 @@ namespace App\Models;
 
 use App\Models\{SqlConnect, InventoryLogModel};
 use App\Utils\{HttpException, JWT};
-use App\Traits\StockManagementTrait;
+use App\Traits\{StockManagementTrait, FilterableTrait};
 use \stdClass;
 use \PDO;
 
 class ProductModel extends SqlConnect {
     use StockManagementTrait;
+    use FilterableTrait;
 
     private InventoryLogModel $inventoryLog;
     
@@ -179,31 +180,26 @@ class ProductModel extends SqlConnect {
     /**
      * Retrieves all products, optionally limited by a specified number.
      * 
-     * @param int|null $limit The maximum number of categories to retrieve (optional)
+     * @param array|null $filters Optional array of filters to apply to the query. Can include conditions for any user fields.
      * @return array An array of product data as associative arrays
      * @author Mathieu Chauvet
      */
-    public function getAll(?int $limit = null) {
+    public function getAll(?array $filters = null) {
         try {
-            $query = "SELECT * FROM {$this->tableProducts}";
+            $query = "SELECT * FROM {$this->tableProducts} p";
             
-            if ($limit !== null) {
-                if ($limit <= 0) {
-                    throw new HttpException("Limit must be a positive number", 400);
-                }
-                $query .= " LIMIT :limit";
-                $params = [':limit' => (int)$limit];
-            } else {
-                $params = [];
+            $filterData = $this->buildFilterConditions($filters, 'p');
+            
+            if (!empty($filterData['conditions'])) {
+                $query .= " WHERE " . implode(" AND ", $filterData['conditions']);
             }
             
-            $req = $this->db->prepare($query);
-            foreach ($params as $key => $value) {
-                $req->bindValue($key, $value, PDO::PARAM_INT);
-            }
-            $req->execute();
+            $query .= " ORDER BY p.created_at DESC";
             
-            return $req->fetchAll(PDO::FETCH_ASSOC);
+            $stmt = $this->db->prepare($query);
+            $stmt->execute($filterData['params']);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         }  catch (HttpException $e) {
             throw $e;
@@ -243,10 +239,8 @@ class ProductModel extends SqlConnect {
      */
     public function update(array $data, int $id) {
         try {
-            // Vérifier si le produit existe AVANT la transaction
             $currentProduct = $this->getById($id);
-            
-            // Préparer toutes les données AVANT la transaction
+
             $fields = [];
             $params = [];
             foreach ($data as $key => $value) {
@@ -263,7 +257,6 @@ class ProductModel extends SqlConnect {
                 );
             }
 
-            // Toutes les validations AVANT la transaction
             if (isset($data['name']) && empty(trim($data['name']))) {
                 throw new HttpException("Product name cannot be empty", 400);
             }
@@ -276,18 +269,15 @@ class ProductModel extends SqlConnect {
                 $this->validatePrice($data['price']);
             }
 
-            // Début de la transaction optimisée
             $this->db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
             try {
-                // Mise à jour du produit
                 $query = "UPDATE $this->tableProducts SET " . implode(", ", $fields) . " WHERE id = :id";
                 $params[':id'] = $id;
                 
                 $stmt = $this->db->prepare($query);
                 $stmt->execute($params);
 
-                // Log de l'inventaire si nécessaire
                 if (isset($data['quantity_in_stock']) && $data['quantity_in_stock'] != $currentProduct['quantity_in_stock']) {
                     $token = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
                     $token = str_replace('Bearer ', '', $token);
@@ -329,16 +319,13 @@ class ProductModel extends SqlConnect {
      */
     public function delete(int $id): bool {
         try {
-            // Récupérer le produit avant suppression
             $product = $this->getById($id);
             
             try {
-                // Logger le changement de stock
                 $token = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
                 $token = str_replace('Bearer ', '', $token);
                 $payload = JWT::decryptToken($token);
-                
-                // Log avant suppression
+
                 $this->inventoryLog->logChange(
                     $id,
                     $payload['user_id'] ?? null,
@@ -347,7 +334,6 @@ class ProductModel extends SqlConnect {
                     'deletion'
                 );
 
-                // Supprimer le produit (les logs seront supprimés en cascade)
                 $stmt = $this->db->prepare("DELETE FROM $this->tableProducts WHERE id = :id");
                 $success = $stmt->execute(['id' => $id]);
                 

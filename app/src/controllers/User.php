@@ -4,8 +4,7 @@ namespace App\Controllers;
 
 use App\Controllers\Controller;
 use App\Models\UserModel;
-use App\Utils\Route;
-use App\Utils\HttpException;
+use App\Utils\{Route, HttpException};
 use App\Middlewares\AuthMiddleware;
 
 class User extends Controller {
@@ -57,19 +56,13 @@ class User extends Controller {
     #[Route("GET", "/users", middlewares: [AuthMiddleware::class], allowedRoles:['admin'])]
     public function getUsers() {
         try {
-            $limit = isset($this->params['limit']) ? intval($this->params['limit']) : null;
-
-            if ($limit !== null && $limit <= 0) {
-                throw new HttpException("Limit must be a positive number", 400);
-            }
-
-            $users = $this->user->getAll($limit);
-
-            if (empty($users)) {
-                return [];
-            }
-
-            return $users;
+            $filters = [
+                'date_from' => $this->query['date_from'] ?? null,
+                'date_to' => $this->query['date_to'] ?? null,
+                'limit' => $this->query['limit'] ?? null
+            ];
+            
+            return $this->user->getAll(array_filter($filters));
         } catch (HttpException $e) {
             throw $e;
         } catch (\Exception $e) {
@@ -129,32 +122,6 @@ class User extends Controller {
         try {
             $id = intval($this->params['id']);
             return $this->user->promoteToAdmin($id);
-        } catch (HttpException $e) {
-            throw $e;
-        } catch (\Exception $e) {
-            throw new HttpException($e->getMessage(), 500);
-        }
-    }
-
-    /**
-     * Update the password of an user.
-     *
-     * @throws HttpException if the new password is missing or update fails
-     * @return array containing success message
-     * @author Mathieu Chauvet
-     */
-    #[Route("PATCH", "/users/:id/update-password", middlewares: [AuthMiddleware::class], allowedRoles: ['admin'])]
-    public function updateUserPassword() {
-        try {
-            $id = intval($this->params['id']);
-            $data = $this->body;
-
-            if (empty($data['new_password'])) {
-                    throw new HttpException("New password is required.", 400);
-            }
-
-            $this->user->updatePassword($id, $data['new_password']);
-            return ["message" => "Password updated successfully"];
         } catch (HttpException $e) {
             throw $e;
         } catch (\Exception $e) {

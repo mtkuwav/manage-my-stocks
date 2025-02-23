@@ -69,6 +69,37 @@ class AuthModel extends SqlConnect {
     }
 
 
+    // ┌──────────────────────────────────┐
+    // | -------- UPDATE METHODS -------- |
+    // └──────────────────────────────────┘
+
+    /**
+     * Updates the password of a user.
+     *
+     * @param int $userId The ID of the user whose password is to be updated.
+     * @param string $newPassword The new password.
+     * @return bool True if the password was updated successfully, false otherwise.
+     * @throws HttpException If the update fails.
+     * @author Mathieu Chauvet
+     */
+    public function updatePassword(int $userId, string $newPassword) {
+        $saltedPassword = $newPassword . $this->passwordSalt;
+        $hashedPassword = password_hash($saltedPassword, PASSWORD_BCRYPT);
+
+        $query = "UPDATE $this->tableUsers SET password_hash = :password_hash WHERE id = :id";
+        $req = $this->db->prepare($query);
+        $success = $req->execute([
+            'password_hash' => $hashedPassword,
+            'id' => $userId
+        ]);
+
+        if (!$success) {
+            throw new HttpException("Failed to update password", 500);
+        }
+
+        return true;
+    }
+
     // ┌────────────────────────────────┐
     // | -------- AUTH METHODS -------- |
     // └────────────────────────────────┘
@@ -278,5 +309,31 @@ class AuthModel extends SqlConnect {
 
         $req = $this->db->prepare($query);
         return $req->execute(['user_id' => $userId]);
+    }
+
+
+    // ┌────────────────────────────────┐
+    // | -------- MISC METHODS -------- |
+    // └────────────────────────────────┘
+
+    /**
+     * Verify user's password
+     *
+     * @param int $userId The ID of the user
+     * @param string $password The password to verify
+     * @return bool True if password is correct, false otherwise
+     */
+    public function verifyPassword(int $userId, string $password): bool {
+        $query = "SELECT password_hash FROM $this->tableUsers WHERE id = :id";
+        $req = $this->db->prepare($query);
+        $req->execute(['id' => $userId]);
+        
+        $user = $req->fetch(PDO::FETCH_ASSOC);
+        if (!$user) {
+            return false;
+        }
+
+        $saltedPassword = $password . $this->passwordSalt;
+        return password_verify($saltedPassword, $user['password_hash']);
     }
 }

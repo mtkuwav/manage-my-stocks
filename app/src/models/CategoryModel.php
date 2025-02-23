@@ -4,10 +4,13 @@ namespace App\Models;
 
 use App\Models\SqlConnect;
 use App\Utils\HttpException;
+use App\Traits\FilterableTrait;
 use \stdClass;
 use \PDO;
 
 class CategoryModel extends SqlConnect {
+    use FilterableTrait;
+
     private string $table = "categories";
     public $authorized_fields_to_update = ['name'];
 
@@ -80,32 +83,25 @@ class CategoryModel extends SqlConnect {
     /**
      * Retrieves all categories, optionally limited by a specified number.
      * 
-     * @param int|null $limit The maximum number of categories to retrieve (optional)
+     * @param array|null $filters Optional array of filters to apply to the query. Can include conditions for any user fields.
      * @return array An array of category data as associative arrays
      * @author Mathieu Chauvet
      */
-    public function getAll(?int $limit = null) {
+    public function getAll(?array $filters = null) {
         try {
-            $query = "SELECT * FROM {$this->table}";
+            $query = "SELECT * FROM {$this->table} c";
             
-            if ($limit !== null) {
-                if ($limit <= 0) {
-                    throw new HttpException("Limit must be a positive number", 400);
-                }
-                $query .= " LIMIT :limit";
-                $params = [':limit' => (int)$limit];
-            } else {
-                $params = [];
+            $filterData = $this->buildFilterConditions($filters, 'c');
+            
+            if (!empty($filterData['conditions'])) {
+                $query .= " WHERE " . implode(" AND ", $filterData['conditions']);
             }
             
-            $req = $this->db->prepare($query);
-            foreach ($params as $key => $value) {
-                $req->bindValue($key, $value, PDO::PARAM_INT);
-            }
-            $req->execute();
+            $query .= " ORDER BY c.created_at DESC" . $filterData['limit'];
             
-            return $req->fetchAll(PDO::FETCH_ASSOC);
-
+            $stmt = $this->db->prepare($query);
+            $stmt->execute($filterData['params']);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
         }  catch (HttpException $e) {
             throw $e;
         } catch (\PDOException $e) {
