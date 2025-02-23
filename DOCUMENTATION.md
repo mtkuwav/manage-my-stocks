@@ -22,17 +22,21 @@
    - [List Products](#list-products)
    - [Delete Product](#delete-product)
 
-4. [Categories](#categories)
+4. [Inventory Logs](#inventory-logs)
+   - [List logs](#list-logs-with-optional-limit)
+   - [Get A Log](#get-log)
+
+5. [Categories](#categories)
    - [Create Category](#create-category)
    - [Update Category](#update-category)
    - [Get Category](#get-category)
    - [List Categories](#list-categories)
    - [Delete Category](#delete-category)
 
-5. [Error Handling](#error-handling)
+6. [Error Handling](#error-handling)
    - [Error Responses](#error-responses)
 
-6. [Security Information](#security-information)
+7. [Security Information](#security-information)
    - [Token Security](#token-security)
 
 ## **IMPORTANT NOTE**
@@ -418,9 +422,9 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 }
 ```
 
-## Products Logs
+## Inventory Logs
 
-### Get All Logs (with optional limit)
+### List Logs (with optional limit)
 
 - **Route**: `GET /inventory-logs` (add `?limit=[the limit you want]` if you want limited results)
 - **Access**: Private (Admin and manager users)
@@ -449,6 +453,24 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
     },
     // etc.
 ]
+```
+
+### Get Log
+- **Route**: `GET /inventory-logs/{id}`
+- **Access**: Private (admin, manager)
+- **Description**: Retrieve a single log details
+
+**Response**:
+```json
+{
+    "id": "1",
+    "product_id": "1",
+    "old_quantity": "0",
+    "new_quantity": "10",
+    "change_type": "initial",
+    "created_at": "2021-01-01T00:00:00.000Z",
+    "username": "john.doe"
+}
 ```
 
 ## Categories
