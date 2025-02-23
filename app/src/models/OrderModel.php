@@ -214,27 +214,23 @@ class OrderModel extends SqlConnect {
      * @author Mathieu Chauvet
      */
     public function cancelOrder(int $id): array {
-        try {    
-            // 1. Get order and verify status
+        try {
             $order = $this->getById($id);
             if ($order['status'] === 'cancelled') {
                 throw new HttpException("Order is already cancelled", 400);
             }
-    
-            // 2. Update order status
+
             $stmt = $this->db->prepare(
                 "UPDATE $this->ordersTable SET status = 'cancelled' WHERE id = ?"
             );
             $stmt->execute([$id]);
-    
-            // 3. Restore stock for each item
+
             foreach ($order['items'] as $item) {
                 // Get current stock
                 $stmt = $this->db->prepare("SELECT quantity_in_stock FROM products WHERE id = ?");
                 $stmt->execute([$item['product_id']]);
                 $currentStock = (int)$stmt->fetch(PDO::FETCH_COLUMN);
-    
-                // Calculate and update new stock
+
                 $newStock = $currentStock + $item['quantity'];
                 $stmt = $this->db->prepare(
                     "UPDATE products 
@@ -246,8 +242,7 @@ class OrderModel extends SqlConnect {
                     'new_quantity' => $newStock,
                     'product_id' => $item['product_id']
                 ]);
-    
-                // Verify update
+
                 $stmt = $this->db->prepare("SELECT quantity_in_stock FROM products WHERE id = ?");
                 $stmt->execute([$item['product_id']]);
                 $updatedStock = (int)$stmt->fetch(PDO::FETCH_COLUMN);
@@ -280,7 +275,6 @@ class OrderModel extends SqlConnect {
      * @author Mathieu Chauvet
      */
     private function validateAndCalculateItems(array|object $items): float {
-        // Convert items to array if it's an object
         $itemsArray = is_object($items) ? json_decode(json_encode($items), true) : $items;
         
         if (!is_array($itemsArray)) {

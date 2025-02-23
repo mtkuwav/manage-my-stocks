@@ -25,7 +25,10 @@
 4. [Orders](#orders)
    - [Create Order](#create-order)
    - [Get Order](#get-order)
+   - [Get All Orders](#get-all-orders)
+   - [Get Order Statistics](#get-order-statistics)
    - [Update Order Status](#update-order-status)
+   - [Cancel Order](#cancel-order)
 
 5. [Inventory Logs](#inventory-logs)
    - [List logs](#list-logs-with-optional-limit)
@@ -555,6 +558,65 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 
 **Response**: Same as create order response
 
+### Get All Orders
+- **Route**: `GET /orders`
+- **Access**: Private (admin, manager)
+- **Description**: Get all orders with optional filters
+
+**Query Parameters**:
+```json
+{
+    "status": "pending",        // Optional: Filter by order status
+    "user_id": 1,              // Optional: Filter by user
+    "date_from": "2025-01-01", // Optional: Filter from date
+    "date_to": "2025-12-31"    // Optional: Filter to date
+}
+```
+
+**Response**:
+```json
+[
+    {
+        "id": 1,
+        "user_id": 1,
+        "status": "pending",
+        "total_amount": 2649.97,
+        "created_at": "2025-01-01T00:00:00.000Z",
+        "updated_at": "2025-01-01T00:00:00.000Z",
+        "user_name": "john.doe",
+        "items": [
+            // ... items array
+        ]
+    }
+    // ... more orders
+]
+```
+
+### Get Order Statistics
+- **Route**: `GET /orders/statistics`
+- **Access**: Private (admin only)
+- **Description**: Get order statistics with optional filters
+
+**Query Parameters**:
+```json
+{
+    "status": "completed",     // Optional: Filter by status
+    "date_from": "2025-01-01", // Optional: From date
+    "date_to": "2025-12-31"    // Optional: To date
+}
+```
+
+**Response**:
+```json
+{
+    "total_orders": 50,
+    "total_revenue": 15000.00,
+    "completed_orders": 40,
+    "cancelled_orders": 5,
+    "average_order_value": 300.00
+}
+```
+
 ### Update Order Status
 - **Route**: `PATCH /orders/{id}/status`
 - **Access**: Private (admin, manager)
@@ -574,6 +636,13 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 - `cancelled`: Order has been cancelled
 
 **Response**: Same as create order response but with updated status
+
+### Cancel Order
+- **Route**: `POST /orders/{id}/cancel`
+- **Access**: Private (admin only)
+- **Description**: Cancel an order and restore product stock
+
+**Response**: Same as get order response but with status "cancelled"
 
 ## Categories
 
