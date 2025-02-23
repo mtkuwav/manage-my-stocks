@@ -236,10 +236,10 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 }
 ```
 
-### Get All Users Profile (with optional limit)
-- **Route**: `GET /users`
+### List Users Profile (with optional limit)
+- **Route**: `GET /users` (add `?limit=[the limit you want]` if you want limited results)
 - **Access**: Private (Admin users)
-- **Description**: Retrieve the profile of all users in an array
+- **Description**: Retrieve the profile of all users in an array or the number of them specified
 
 **Response**:
 ```json
@@ -383,10 +383,10 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 }
 ```
 
-### List Products
-- **Route**: `GET /products`
+### List Products (with optional limit)
+- **Route**: `GET /products` (add `?limit=[the limit you want]` if you want limited results)
 - **Access**: Private (admin, manager)
-- **Description**: List all products (with optional limit)
+- **Description**: List all products or the number of products specified
 
 **Response**:
 ```json
@@ -416,6 +416,39 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 {
     "message": "Product deleted successfully"
 }
+```
+
+## Products Logs
+
+### Get All Logs (with optional limit)
+
+- **Route**: `GET /inventory-logs` (add `?limit=[the limit you want]` if you want limited results)
+- **Access**: Private (Admin and manager users)
+- **Description**: Retrieve the profile of all users in an array or the number of them specified
+
+**Response**:
+```json
+[
+    {
+        "id": "1",
+        "product_id": "1",
+        "old_quantity": "0",
+        "new_quantity": "10",
+        "change_type": "initial",
+        "created_at": "2021-01-01T00:00:00.000Z",
+        "username": "john.doe"
+    },
+    {
+        "id": "2",
+        "product_id": "2",
+        "old_quantity": "0",
+        "new_quantity": "25",
+        "change_type": "initial",
+        "created_at": "2021-01-01T00:00:00.000Z",
+        "username": "john.doe"
+    },
+    // etc.
+]
 ```
 
 ## Categories
