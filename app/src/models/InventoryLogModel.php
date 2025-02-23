@@ -39,10 +39,11 @@ class InventoryLogModel extends SqlConnect {
             if ($id <= 0) {
                 throw new HttpException("Invalid log ID", 400);
             }
-        
-            $query = "SELECT l.*, u.username 
+
+            $query = "SELECT l.*, u.username, p.name as product_name, p.sku as product_sku
                     FROM {$this->table} l 
                     LEFT JOIN users u ON l.user_id = u.id 
+                    LEFT JOIN products p ON l.product_id = p.id
                     WHERE l.id = :id";
             $req = $this->db->prepare($query);
             $req->execute(["id" => $id]);
@@ -71,9 +72,10 @@ class InventoryLogModel extends SqlConnect {
      */
     public function getAll(?int $limit = null) {
         try {
-            $query = "SELECT l.*, u.username 
+            $query = "SELECT l.*, u.username, p.name as product_name, p.sku as product_sku
                     FROM {$this->table} l 
-                    LEFT JOIN users u ON l.user_id = u.id";
+                    LEFT JOIN users u ON l.user_id = u.id
+                    LEFT JOIN products p ON l.product_id = p.id";
             
             if ($limit !== null) {
                 if ($limit <= 0) {
@@ -110,9 +112,10 @@ class InventoryLogModel extends SqlConnect {
      */
     public function getLastLog() {
         try {
-            $query = "SELECT l.*, u.username 
+            $query = "SELECT l.*, u.username, p.name as product_name, p.sku as product_sku
                     FROM {$this->table} l 
-                    LEFT JOIN users u ON l.user_id = u.id 
+                    LEFT JOIN users u ON l.user_id = u.id
+                    LEFT JOIN products p ON l.product_id = p.id 
                     ORDER BY l.id DESC LIMIT 1";
 
             $req = $this->db->prepare($query);
@@ -230,18 +233,18 @@ class InventoryLogModel extends SqlConnect {
      */
     private function formatLogWithUsername(array $log) {
         if ($log['user_id']) {
-            $query = "SELECT username FROM users WHERE id = :user_id";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute(['user_id' => $log['user_id']]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            $log['username'] = $user ? $user['username'] : 'Unknown User';
-            unset($log['user_id']);
+            $log['username'] = $log['username'] ?? 'Unknown User';
         } else {
             $log['username'] = 'System';
-            unset($log['user_id']);
         }
-        
+        unset($log['user_id']);
+
+        if (!$log['product_name']) {
+            $log['product_name'] = 'Deleted Product';
+            $log['product_sku'] = 'N/A';
+        }
+        unset($log['product_id']);
+
         return $log;
     }
 }
