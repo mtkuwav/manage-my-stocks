@@ -2,7 +2,7 @@
 
 ## Table of Contents
 - [IMPORTANT](#important-note)
-- [Filters]
+- [Filters](#filters)
 1. [Authentication](#authentication)
    - [Register](#register)
    - [Login](#login)
