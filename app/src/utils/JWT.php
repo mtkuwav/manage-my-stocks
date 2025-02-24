@@ -3,7 +3,14 @@
 namespace App\Utils;
 
 class JWT {
-  private static $secret = "mon-super-secret";
+  private static $secret;
+
+  public static function init() {
+    self::$secret = $_ENV['AUTH_SECRET'] ?? getenv('AUTH_SECRET');
+    if (!self::$secret) {
+        throw new \Exception('AUTH_SECRET environment variable is not set');
+    }
+  }
 
   /**
    * Generate a JSON Web Token (JWT) from the given payload.
@@ -16,6 +23,7 @@ class JWT {
    * @author Rémis Rubis
    */
   public static function generate($payload) {
+    self::init();
     // Base 64
       // Header
     $header = self::base64UrlEncode(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
@@ -40,6 +48,7 @@ class JWT {
    * @author Mathieu Chauvet
    */
   public static function decryptToken($token) {
+    self::init();
     $segments = explode('.', $token);
     if (count($segments) !== 3) {
         throw new \Exception("Invalid token structure");
@@ -75,6 +84,7 @@ class JWT {
    * @author Rémis Rubis
    */
   public static function verify($jwt) {
+    self::init();
     // Ensure the JWT has the correct number of segments
     $segments = explode('.', $jwt);
     if (count($segments) !== 3) {
@@ -99,6 +109,7 @@ class JWT {
    * @author Rémis Rubis
    */
   private static function base64UrlEncode($data) {
+    self::init();
     return rtrim(strtr(base64_encode($data), '+/', '-_'), characters: '=');
   }
 }

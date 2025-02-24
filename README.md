@@ -29,13 +29,18 @@ cp .env.sample .env
 ```
 
 2. Configure your `.env` file with appropriate values:
-```env
+```properties
 DB_NAME=inventory_db
 DB_USER=your_user
 DB_PASSWORD=your_password
 DB_ROOT_PASSWORD=your_root_password
 DB_PORT=3306
 PHPMYADMIN_PORT=8090
+AUTH_SECRET=your_generated_secret
+```
+**Tip :** if you want a really secure AUTH_SECRET, put this as the value of ``AUTH_SECRET`` :
+```bash
+openssl rand -base64 32
 ```
 
 3. Install dependencies and start the containers:
