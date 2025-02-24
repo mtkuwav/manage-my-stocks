@@ -32,7 +32,14 @@
    - [Update Order Status](#update-order-status)
    - [Cancel Order](#cancel-order)
 
-5. [Returns](#returns)
+5. [Deliveries](#deliveries)
+   - [Create Delivery](#create-delivery)
+   - [Update Delivery Status](#update-delivery-status)
+   - [Get Delivery](#get-delivery)
+   - [List Deliveries](#list-deliveries)
+   - [Get Order Deliveries](#get-order-deliveries)
+
+6. [Returns](#returns)
    - [Create Return](#create-return)
    - [Process Return](#process-return)
    - [Get Return](#get-return)
@@ -40,21 +47,21 @@
    - [Get Returns by Product](#get-returns-by-product)
    - [Get Returns Statistics](#get-returns-statistics)
 
-6. [Inventory Logs](#inventory-logs)
+7. [Inventory Logs](#inventory-logs)
    - [List logs](#list-logs-with-optional-limit)
    - [Get A Log](#get-log)
 
-7. [Categories](#categories)
+8. [Categories](#categories)
    - [Create Category](#create-category)
    - [Update Category](#update-category)
    - [Get Category](#get-category)
    - [List Categories](#list-categories)
    - [Delete Category](#delete-category)
 
-8. [Error Handling](#error-handling)
+9. [Error Handling](#error-handling)
    - [Error Responses](#error-responses)
 
-9. [Security Information](#security-information)
+10. [Security Information](#security-information)
    - [Token Security](#token-security)
 
 ## **IMPORTANT NOTE**
@@ -111,6 +118,14 @@ All list endpoints support these basic filters:
 {
     "role": "manager",          // Filter by user role
     "username": "john"          // Filter by username (partial match)
+}
+```
+
+#### Deliveries
+```json
+{
+    "status": "pending",        // Filter by delivery status
+    "order_id": 1              // Filter by order ID
 }
 ```
 
@@ -759,6 +774,138 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 - **Description**: Cancel an order and restore product stock
 
 **Response**: Same as get order response but with status "cancelled"
+
+## Deliveries
+
+### Create Delivery
+- **Route**: `POST /deliveries`
+- **Access**: Private (admin, manager)
+- **Description**: Create a new delivery for an order
+
+**Request**:
+```json
+{
+    "order_id": 1
+}
+```
+
+**Response**:
+```json
+{
+    "id": 1,
+    "order_id": 1,
+    "status": "pending",
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z",
+    "order_details": {
+        "user_name": "john.doe",
+        "total_amount": 149.99,
+        "items": [
+            {
+                "product_name": "Laptop Dell XPS 13",
+                "quantity": 1,
+                "unit_price": 149.99
+            }
+        ]
+    }
+}
+```
+
+### Update Delivery Status
+- **Route**: `PATCH /deliveries/{id}`
+- **Access**: Private (admin, manager)
+- **Description**: Update the status of a delivery
+
+**Request**:
+```json
+{
+    "status": "in_transit"
+}
+```
+
+**Available Statuses**:
+- `pending`: Delivery is being prepared
+- `in_transit`: Delivery is on its way
+- `delivered`: Delivery has been completed
+- `failed`: Delivery attempt failed
+
+**Response**:
+```json
+{
+    "id": 1,
+    "order_id": 1,
+    "status": "in_transit",
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z",
+    "order_details": {
+        "user_name": "john.doe",
+        "total_amount": 149.99,
+        "items": [
+            {
+                "product_name": "Laptop Dell XPS 13",
+                "quantity": 1,
+                "unit_price": 149.99
+            }
+        ]
+    }
+}
+```
+
+### Get Delivery
+- **Route**: `GET /deliveries/{id}`
+- **Access**: Private (admin, manager)
+- **Description**: Get details of a specific delivery
+
+**Response**: Same as update delivery status response
+
+### List Deliveries
+- **Route**: `GET /deliveries`
+- **Access**: Private (admin, manager)
+- **Description**: List all deliveries with optional filters
+
+**Query Parameters**:
+```json
+{
+    "status": "pending",        // Optional: Filter by status
+    "date_from": "2025-01-01", // Optional: Filter from date
+    "date_to": "2025-12-31",   // Optional: Filter to date
+    "limit": 10               // Optional: Limit number of results
+}
+```
+
+**Response**:
+```json
+[
+    {
+        "id": 1,
+        "order_id": 1,
+        "status": "pending",
+        "created_at": "2025-01-01T00:00:00.000Z",
+        "updated_at": "2025-01-01T00:00:00.000Z",
+        "order_details": {
+            "user_name": "john.doe",
+            "total_amount": 149.99,
+            "items": [
+                {
+                    "product_name": "Laptop Dell XPS 13",
+                    "quantity": 1,
+                    "unit_price": 149.99
+                }
+            ]
+        }
+    }
+    // ... more deliveries
+]
+```
+
+### Get Order Deliveries
+- **Route**: `GET /orders/{id}/deliveries`
+- **Access**: Private (admin, manager)
+- **Description**: Get all deliveries for a specific order
+
+**Query Parameters**: Same as List Deliveries
+
+**Response**: Same format as List Deliveries
 
 ## Returns
 

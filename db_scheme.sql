@@ -94,8 +94,9 @@ CREATE TABLE IF NOT EXISTS `order_items` (
 CREATE TABLE IF NOT EXISTS `deliveries` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `order_id` INT UNSIGNED NOT NULL,
-  `delivery_date` TIMESTAMP NULL,
   `status` ENUM('pending', 'shipped', 'delivered', 'failed') NOT NULL DEFAULT 'pending',
+  `expected_delivery_date` DATE NULL,
+  `actual_delivery_date` TIMESTAMP NULL COMMENT 'Will be set when delivery status changes to delivered',
   `tracking_number` VARCHAR(100) NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
