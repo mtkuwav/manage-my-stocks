@@ -3,16 +3,27 @@
 namespace App\Controllers;
 
 use App\Controllers\Controller;
-use App\Utils\{HttpException, Route};
+use App\Utils\{HttpException, Route, JWT};
 use App\Models\OrderModel;
 use App\Middlewares\AuthMiddleware;
 
 class Order extends Controller {
     protected OrderModel $order;
+    protected ?array $decodedToken;
 
     public function __construct($params) {
         parent::__construct($params);
         $this->order = new OrderModel();
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
+            try {
+                $this->decodedToken = (array) JWT::decryptToken($matches[1]);
+            } catch (\Exception $e) {
+                throw new HttpException("Invalid token: " . $e->getMessage(), 401);
+            }
+        } else {
+            $this->decodedToken = null;
+        }
     }
 
 
@@ -30,12 +41,13 @@ class Order extends Controller {
     #[Route("POST", "/orders", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
     public function createOrder() {
         try {
-            // Convertir l'objet en tableau si nécessaire
             $data = json_decode(json_encode($this->body), true);
 
-            if (!isset($data['user_id'])) {
-                throw new HttpException("User ID is required", 400);
+            if (!$this->decodedToken || !isset($this->decodedToken['user_id'])) {
+                throw new HttpException("User authentication required", 401);
             }
+
+            $data['user_id'] = $this->decodedToken['user_id'];
     
             if (!isset($data['items']) || !is_array($data['items'])) {
                 throw new HttpException("Items array is required", 400);

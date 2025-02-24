@@ -38,10 +38,6 @@ class OrderModel extends SqlConnect {
         try {
             $orderData = is_object($data) ? json_decode(json_encode($data), true) : $data;
 
-            if (empty($orderData['user_id'])) {
-                throw new HttpException("User ID is required", 400);
-            }
-
             if (empty($orderData['items'])) {
                 throw new HttpException("Order items are required", 400);
             }
