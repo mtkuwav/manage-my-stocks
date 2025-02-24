@@ -36,7 +36,6 @@ DB_PASSWORD=your_password
 DB_ROOT_PASSWORD=your_root_password
 DB_PORT=3306
 PHPMYADMIN_PORT=8090
-JWT_SECRET=your_secret_key
 ```
 
 3. Install dependencies and start the containers:
