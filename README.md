@@ -49,7 +49,9 @@ cd app && composer install && cd ../
 docker-compose up -d
 ```
 
-4. (Optional) If you want to populate the database, execute this PHP script :
+4. Import ''db_scheme.php'' in phpMyAdmin in the database specified in the .env
+
+5. (Optional) If you want to populate the database, execute this PHP script :
 ```sh
 php app/src/scripts/populate_db.php
 ```
