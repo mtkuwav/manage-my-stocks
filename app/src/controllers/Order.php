@@ -30,7 +30,27 @@ class Order extends Controller {
     #[Route("POST", "/orders", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
     public function createOrder() {
         try {
-            return $this->order->create($this->body);
+            // Convertir l'objet en tableau si nécessaire
+            $data = json_decode(json_encode($this->body), true);
+
+            if (!isset($data['user_id'])) {
+                throw new HttpException("User ID is required", 400);
+            }
+    
+            if (!isset($data['items']) || !is_array($data['items'])) {
+                throw new HttpException("Items array is required", 400);
+            }
+    
+            foreach ($data['items'] as $item) {
+                if (!isset($item['product_id'], $item['quantity'])) {
+                    throw new HttpException("Each item must have product_id and quantity", 400);
+                }
+                if ($item['quantity'] <= 0) {
+                    throw new HttpException("Quantity must be greater than 0", 400);
+                }
+            }
+            
+            return $this->order->create($data);
         } catch (HttpException $e) {
             throw $e;
         }
