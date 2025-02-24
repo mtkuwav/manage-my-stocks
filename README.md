@@ -9,9 +9,9 @@ This API provides a comprehensive solution for small business owners to manage t
 - 🔐 JWT Authentication
 - 📦 Complete Product Management (CRUD)
 - 🗂️ Stock Level Tracking
-<!-- - 📋 Order Processing System -->
-<!-- - 🚚 Delivery Management
-- ↩️ Returns Processing -->
+- 📋 Order Processing System
+- 🚚 Delivery Management
+- ↩️ Returns Processing
 
 ## Technical Requirements
 
@@ -36,7 +36,6 @@ DB_PASSWORD=your_password
 DB_ROOT_PASSWORD=your_root_password
 DB_PORT=3306
 PHPMYADMIN_PORT=8090
-JWT_SECRET=your_secret_key
 ```
 
 3. Install dependencies and start the containers:
@@ -68,17 +67,13 @@ You can consult the database diagram either with [the pdf file](https://github.c
 - PUT `/api/products/{id}` - Update product
 - DELETE `/api/products/{id}` - Delete product
 
-<!-- ### Orders
+ ### Orders
 - GET `/api/orders` - List all orders
 - POST `/api/orders` - Create new order
 - PUT `/api/orders/{id}` - Update order status
-- DELETE `/api/orders/{id}` - Cancel order -->
+- DELETE `/api/orders/{id}` - Cancel order
 
-### Stock Management
-- GET `/api/stock/{product_id}` - Check stock level
-- PUT `/api/stock/{product_id}` - Update stock level
-
-**For a more precise documentation, check [this](./DOCUMENTATION.md).** 
+### **And more availible [on the doc !](./DOCUMENTATION.md)**
 
 ## Development Access
 
