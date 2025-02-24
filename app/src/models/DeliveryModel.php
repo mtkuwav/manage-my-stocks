@@ -18,8 +18,18 @@ class DeliveryModel extends SqlConnect {
         'failed' => 'Failed'
     ];
 
+
+    // ┌──────────────────────────────────┐
+    // | -------- CREATE METHODS -------- |
+    // └──────────────────────────────────┘
+
     /**
-     * Create a new delivery
+     * Create a new delivery for a completed order
+     * 
+     * @param array $data Delivery data containing order_id
+     * @return array The created delivery data
+     * @throws HttpException If order not found, not completed, or delivery creation fails
+     * @author Mathieu Chauvet
      */
     public function create(array $data): array {
         try {
@@ -70,8 +80,92 @@ class DeliveryModel extends SqlConnect {
         }
     }
 
+
+    // ┌────────────────────────────────┐
+    // | -------- READ METHODS -------- |
+    // └────────────────────────────────┘
+
+    /**
+     * Get delivery by ID
+     * 
+     * @param int $id The ID of the delivery to retrieve
+     * @return array|null The delivery data or null if not found
+     * @author Mathieu Chauvet
+     */
+    public function getById(int $id): ?array {
+        $stmt = $this->db->prepare(
+            "SELECT d.*, o.user_id, o.status as order_status
+            FROM deliveries d
+            JOIN orders o ON d.order_id = o.id
+            WHERE d.id = ?"
+        );
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    /**
+     * Get all deliveries with optional filters
+     * 
+     * @param array|null $filters Optional filters to apply
+     * @return array Array of deliveries matching the filters
+     * @throws HttpException If fetching deliveries fails
+     * @author Mathieu Chauvet
+     */
+    public function getAll(?array $filters = null): array {
+        try {
+            $query = "SELECT d.*, o.user_id, o.status as order_status
+                    FROM deliveries d
+                    JOIN orders o ON d.order_id = o.id";
+
+            $filterData = $this->buildFilterConditions($filters, 'd');
+            
+            if (!empty($filterData['conditions'])) {
+                $query .= " WHERE " . implode(" AND ", $filterData['conditions']);
+            }
+            
+            $query .= " ORDER BY d.created_at DESC" . $filterData['limit'];
+
+            $stmt = $this->db->prepare($query);
+            $stmt->execute($filterData['params']);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            throw new HttpException("Failed to fetch deliveries: " . $e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Get deliveries for a specific order
+     * 
+     * @param int $orderId The ID of the order
+     * @param array|null $filters Optional filters to apply
+     * @return array Array of deliveries for the specified order
+     * @throws HttpException If fetching order deliveries fails
+     * @author Mathieu Chauvet
+     */
+    public function getByOrder(int $orderId, ?array $filters = null): array {
+        try {
+            $filters = $filters ?? [];
+            $filters['order_id'] = $orderId;
+
+            return $this->getAll($filters);
+        } catch (\Exception $e) {
+            throw new HttpException("Failed to fetch order deliveries: " . $e->getMessage(), 500);
+        }
+    }
+
+
+    // ┌──────────────────────────────────┐
+    // | -------- UPDATE METHODS -------- |
+    // └──────────────────────────────────┘
+
     /**
      * Update delivery status
+     * 
+     * @param int $id The ID of the delivery
+     * @param string $status The new status
+     * @return array The updated delivery data
+     * @throws HttpException If delivery not found, invalid status, or update fails
+     * @author Mathieu Chauvet
      */
     public function updateStatus(int $id, string $status): array {
         try {
@@ -111,59 +205,19 @@ class DeliveryModel extends SqlConnect {
         }
     }
 
-    /**
-     * Get delivery by ID
-     */
-    public function getById(int $id): ?array {
-        $stmt = $this->db->prepare(
-            "SELECT d.*, o.user_id, o.status as order_status
-            FROM deliveries d
-            JOIN orders o ON d.order_id = o.id
-            WHERE d.id = ?"
-        );
-        $stmt->execute([$id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-    }
+
+    // ┌──────────────────────────────────┐
+    // | -------- HELPER METHODS -------- |
+    // └──────────────────────────────────┘
 
     /**
-     * Get all deliveries with optional filters
+     * Generate a unique tracking number for a delivery
+     * 
+     * @param int $orderId The ID of the order
+     * @return string The generated tracking number
+     * @throws HttpException If order not found or generation fails
+     * @author Mathieu Chauvet
      */
-    public function getAll(?array $filters = null): array {
-        try {
-            $query = "SELECT d.*, o.user_id, o.status as order_status
-                    FROM deliveries d
-                    JOIN orders o ON d.order_id = o.id";
-
-            $filterData = $this->buildFilterConditions($filters, 'd');
-            
-            if (!empty($filterData['conditions'])) {
-                $query .= " WHERE " . implode(" AND ", $filterData['conditions']);
-            }
-            
-            $query .= " ORDER BY d.created_at DESC" . $filterData['limit'];
-
-            $stmt = $this->db->prepare($query);
-            $stmt->execute($filterData['params']);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (\Exception $e) {
-            throw new HttpException("Failed to fetch deliveries: " . $e->getMessage(), 500);
-        }
-    }
-
-    /**
-     * Get deliveries for a specific order
-     */
-    public function getByOrder(int $orderId, ?array $filters = null): array {
-        try {
-            $filters = $filters ?? [];
-            $filters['order_id'] = $orderId;
-
-            return $this->getAll($filters);
-        } catch (\Exception $e) {
-            throw new HttpException("Failed to fetch order deliveries: " . $e->getMessage(), 500);
-        }
-    }
-
     private function generateTrackingNumber(int $orderId): string {
         try {
             // Get order details for tracking number generation

@@ -15,6 +15,18 @@ class Delivery extends Controller {
         $this->delivery = new DeliveryModel();
     }
 
+
+    // ┌──────────────────────────────────┐
+    // | -------- CREATE METHODS -------- |
+    // └──────────────────────────────────┘
+
+    /**
+     * Create a new delivery for a completed order
+     * 
+     * @throws HttpException if order_id is missing or creation fails
+     * @return array The created delivery data
+     * @author Mathieu Chauvet
+     */
     #[Route("POST", "/deliveries", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
     public function createDelivery() {
         try {
@@ -27,19 +39,18 @@ class Delivery extends Controller {
         }
     }
 
-    #[Route("PATCH", "/deliveries/:id", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
-    public function updateDeliveryStatus() {
-        try {
-            $id = intval($this->params['id']);
-            if (!isset($this->body['status'])) {
-                throw new HttpException("Status is required", 400);
-            }
-            return $this->delivery->updateStatus($id, $this->body['status']);
-        } catch (HttpException $e) {
-            throw $e;
-        }
-    }
 
+    // ┌────────────────────────────────┐
+    // | -------- READ METHODS -------- |
+    // └────────────────────────────────┘
+
+    /**
+     * Get a specific delivery by ID
+     * 
+     * @return array The delivery data
+     * @throws HttpException if delivery not found
+     * @author Mathieu Chauvet
+     */
     #[Route("GET", "/deliveries/:id", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
     public function getDelivery() {
         try {
@@ -56,6 +67,13 @@ class Delivery extends Controller {
         }
     }
 
+    /**
+     * Get all deliveries with optional filtering
+     * 
+     * @return array Array of all deliveries matching the applied filters
+     * @throws HttpException if there's an error retrieving deliveries
+     * @author Mathieu Chauvet
+     */
     #[Route("GET", "/deliveries", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
     public function getDeliveries() {
         try {
@@ -71,6 +89,13 @@ class Delivery extends Controller {
         }
     }
 
+    /**
+     * Get all deliveries for a specific order
+     * 
+     * @return array Array of deliveries for the specified order
+     * @throws HttpException if there's an error retrieving order deliveries
+     * @author Mathieu Chauvet
+     */
     #[Route("GET", "/orders/:id/deliveries", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
     public function getOrderDeliveries() {
         try {
@@ -82,6 +107,31 @@ class Delivery extends Controller {
                 'limit' => isset($_GET['limit']) ? (int)$_GET['limit'] : null
             ]);
             return $this->delivery->getByOrder($orderId, $filters);
+        } catch (HttpException $e) {
+            throw $e;
+        }
+    }
+
+
+    // ┌──────────────────────────────────┐
+    // | -------- UPDATE METHODS -------- |
+    // └──────────────────────────────────┘
+
+    /**
+     * Update delivery status
+     * 
+     * @throws HttpException if status is missing or update fails
+     * @return array The updated delivery data
+     * @author Mathieu Chauvet
+     */
+    #[Route("PATCH", "/deliveries/:id", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
+    public function updateDeliveryStatus() {
+        try {
+            $id = intval($this->params['id']);
+            if (!isset($this->body['status'])) {
+                throw new HttpException("Status is required", 400);
+            }
+            return $this->delivery->updateStatus($id, $this->body['status']);
         } catch (HttpException $e) {
             throw $e;
         }
