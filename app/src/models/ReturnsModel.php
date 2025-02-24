@@ -155,7 +155,6 @@ class ReturnsModel extends SqlConnect {
                     JOIN products p ON oi.product_id = p.id
                     LEFT JOIN users u ON r.processed_by = u.id";
 
-            // Utiliser le FilterableTrait
             $filterData = $this->buildFilterConditions($filters, 'r');
             
             if (!empty($filterData['conditions'])) {
@@ -163,7 +162,7 @@ class ReturnsModel extends SqlConnect {
             }
             
             $query .= " ORDER BY r.created_at DESC" . $filterData['limit'];
-            
+
             $stmt = $this->db->prepare($query);
             $stmt->execute($filterData['params']);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -235,10 +234,9 @@ class ReturnsModel extends SqlConnect {
      */
     public function getByProduct(int $productId, ?array $filters = null): array {
         try {
-            // Remove product_id from filters since we handle it separately
-            if (isset($filters['product_id'])) {
-                unset($filters['product_id']);
-            }
+            // Ajouter product_id aux filtres
+            $filters = $filters ?? [];
+            $filters['product_id'] = $productId;
 
             $query = "SELECT DISTINCT r.*, u.username as processed_by_username,
                     oi.product_id, oi.quantity as ordered_quantity,
@@ -246,23 +244,22 @@ class ReturnsModel extends SqlConnect {
                     FROM {$this->returnsTable} r
                     JOIN order_items oi ON r.order_item_id = oi.id
                     JOIN products p ON oi.product_id = p.id
-                    LEFT JOIN users u ON r.processed_by = u.id
-                    WHERE oi.product_id = :product_id";
+                    LEFT JOIN users u ON r.processed_by = u.id";
 
-            // Get additional filters using FilterableTrait
-            $filterData = $this->buildFilterConditions($filters, 'r');
+            $filterData = $this->buildFilterConditions($filters, 'r', 'oi');
             
             if (!empty($filterData['conditions'])) {
-                $query .= " AND " . implode(" AND ", $filterData['conditions']);
+                $query .= " WHERE " . implode(" AND ", $filterData['conditions']);
             }
             
-            $query .= " ORDER BY r.created_at DESC" . ($filterData['limit'] ?? '');
-
-            // Prepare and execute query with combined parameters
-            $stmt = $this->db->prepare($query);
-            $params = array_merge(['product_id' => $productId], $filterData['params'] ?? []);
-            $stmt->execute($params);
+            $query .= " ORDER BY r.created_at DESC";
             
+            if (!empty($filterData['limit'])) {
+                $query .= $filterData['limit'];
+            }
+
+            $stmt = $this->db->prepare($query);
+            $stmt->execute($filterData['params']);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Exception $e) {
             throw new HttpException("Failed to fetch product returns: " . $e->getMessage(), 500);

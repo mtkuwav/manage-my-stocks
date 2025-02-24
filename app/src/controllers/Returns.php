@@ -107,13 +107,13 @@ class Returns extends Controller {
     #[Route("GET", "/returns", middlewares: [AuthMiddleware::class], allowedRoles: ['admin', 'manager'])]
     public function getReturns() {
         try {
-            $filters = [
-                'status' => $this->query['status'] ?? null,
-                'date_from' => $this->query['date_from'] ?? null,
-                'date_to' => $this->query['date_to'] ?? null,
-                'limit' => $this->query['limit'] ?? null
-            ];
-            return $this->return->getAll(array_filter($filters));
+            $filters = array_filter([
+                'status' => $_GET['status'] ?? null,
+                'date_from' => $_GET['date_from'] ?? null,
+                'date_to' => $_GET['date_to'] ?? null,
+                'limit' => isset($_GET['limit']) ? (int)$_GET['limit'] : null
+            ]);
+            return $this->return->getAll($filters);
         } catch (HttpException $e) {
             throw $e;
         }
@@ -153,13 +153,13 @@ class Returns extends Controller {
     public function getProductReturns() {
         try {
             $productId = intval($this->params['id']);
-            $filters = [
-                'date_from' => $this->query['date_from'] ?? null,
-                'date_to' => $this->query['date_to'] ?? null,
-                'status' => $this->query['status'] ?? null,
-                'limit' => $this->query['limit'] ?? null
-            ];
-            return $this->return->getByProduct($productId, array_filter($filters));
+            $filters = array_filter([
+                'status' => $_GET['status'] ?? null,
+                'date_from' => $_GET['date_from'] ?? null,
+                'date_to' => $_GET['date_to'] ?? null,
+                'limit' => isset($_GET['limit']) ? (int)$_GET['limit'] : null
+            ]);
+            return $this->return->getByProduct($productId, $filters);
         } catch (HttpException $e) {
             throw $e;
         }
