@@ -9,7 +9,8 @@ use App\Controllers\{
     Category,
     Product,
     InventoryLog,
-    Order
+    Order,
+    Returns
 };
 
 $controllers = [
@@ -18,7 +19,8 @@ $controllers = [
     Category::class,
     Product::class,
     InventoryLog::class,
-    Order::class
+    Order::class,
+    Returns::class
 ];
 
 $router = new Router();

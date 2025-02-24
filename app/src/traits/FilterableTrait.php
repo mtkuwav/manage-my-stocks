@@ -8,9 +8,10 @@ trait FilterableTrait {
      * 
      * @param array $filters Associative array of filters
      * @param string $tableAlias Table alias in query (e.g., 'o' for orders)
+     * @param string $joinAlias Join alias in query (e.g., 'p' for products)
      * @return array ['conditions' => [], 'params' => []]
      */
-    protected function buildFilterConditions(?array $filters, string $tableAlias = ''): array {
+    protected function buildFilterConditions(?array $filters, string $tableAlias = '', string $joinAlias = ''): array {
         $conditions = [];
         $params = [];
         $limit = '';
@@ -19,45 +20,44 @@ trait FilterableTrait {
             return ['conditions' => $conditions, 'params' => $params, 'limit' => ''];
         }
 
-        $prefix = $tableAlias ? "$tableAlias." : '';
+        $mainPrefix = $tableAlias ? "$tableAlias." : '';
+        $joinPrefix = $joinAlias ? "$joinAlias." : '';
 
-        // Status filter
+        // Product ID filter (using join table alias if provided)
+        if (isset($filters['product_id'])) {
+            $prefix = $joinAlias ? $joinPrefix : $mainPrefix;
+            $conditions[] = "{$prefix}product_id = :product_id";
+            $params['product_id'] = (int)$filters['product_id'];
+        }
+
+        // Status filter (always uses main table)
         if (isset($filters['status'])) {
-            $conditions[] = "{$prefix}status = :status";
+            $conditions[] = "{$mainPrefix}status = :status";
             $params['status'] = $filters['status'];
         }
 
-        // User filter
-        if (isset($filters['user_id'])) {
-            $conditions[] = "{$prefix}user_id = :user_id";
-            $params['user_id'] = $filters['user_id'];
-        }
-
-        // Date range filters
+        // Date filters (always use main table)
         if (isset($filters['date_from'])) {
-            $conditions[] = "{$prefix}created_at >= :date_from";
+            $conditions[] = "DATE({$mainPrefix}created_at) = :date_from";
             $params['date_from'] = $filters['date_from'];
         }
 
         if (isset($filters['date_to'])) {
-            $conditions[] = "{$prefix}created_at <= :date_to";
-            $params['date_to'] = $filters['date_to'];
+            if ($filters['date_from'] !== $filters['date_to']) {
+                $conditions[] = "DATE({$mainPrefix}created_at) <= :date_to";
+                $params['date_to'] = $filters['date_to'];
+            }
         }
 
+        // Limit handling
         if (isset($filters['limit']) && $filters['limit'] > 0) {
-            $limit = " LIMIT :limit";
-            $params['limit'] = (int)$filters['limit'];
+            $limit = " LIMIT " . (int)$filters['limit']; // Plus besoin de paramètre bindé pour LIMIT
         }
 
         // Inventory Log specific filters
         if (isset($filters['change_type'])) {
             $conditions[] = "{$prefix}change_type = :change_type";
             $params['change_type'] = $filters['change_type'];
-        }
-
-        if (isset($filters['product_id'])) {
-            $conditions[] = "{$prefix}product_id = :product_id";
-            $params['product_id'] = (int)$filters['product_id'];
         }
 
         // Product specific filters (optionnels)

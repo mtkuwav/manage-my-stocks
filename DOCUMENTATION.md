@@ -32,21 +32,29 @@
    - [Update Order Status](#update-order-status)
    - [Cancel Order](#cancel-order)
 
-5. [Inventory Logs](#inventory-logs)
+5. [Returns](#returns)
+   - [Create Return](#create-return)
+   - [Process Return](#process-return)
+   - [Get Return](#get-return)
+   - [List Returns](#list-returns)
+   - [Get Returns by Product](#get-returns-by-product)
+   - [Get Returns Statistics](#get-returns-statistics)
+
+6. [Inventory Logs](#inventory-logs)
    - [List logs](#list-logs-with-optional-limit)
    - [Get A Log](#get-log)
 
-6. [Categories](#categories)
+7. [Categories](#categories)
    - [Create Category](#create-category)
    - [Update Category](#update-category)
    - [Get Category](#get-category)
    - [List Categories](#list-categories)
    - [Delete Category](#delete-category)
 
-7. [Error Handling](#error-handling)
+8. [Error Handling](#error-handling)
    - [Error Responses](#error-responses)
 
-8. [Security Information](#security-information)
+9. [Security Information](#security-information)
    - [Token Security](#token-security)
 
 ## **IMPORTANT NOTE**
@@ -751,6 +759,154 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 - **Description**: Cancel an order and restore product stock
 
 **Response**: Same as get order response but with status "cancelled"
+
+## Returns
+
+### Create Return
+- **Route**: `POST /returns`
+- **Access**: Private (admin, manager)
+- **Description**: Create a new return request
+
+**Request**:
+```json
+{
+    "order_item_id": 1,
+    "quantity_returned": 2,
+    "reason": "Defective product"
+}
+```
+
+**Response**:
+```json
+{
+    "id": 1,
+    "order_item_id": 1,
+    "quantity_returned": 2,
+    "reason": "Defective product",
+    "status": "requested",
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+}
+```
+
+### Process Return
+- **Route**: `PATCH /returns/{id}`
+- **Access**: Private (admin, manager)
+- **Description**: Process a return request (approve or reject)
+
+**Request**:
+```json
+{
+    "status": "approved"  // or "rejected"
+}
+```
+
+**Response**:
+```json
+{
+    "id": 1,
+    "order_item_id": 1,
+    "quantity_returned": 2,
+    "reason": "Defective product",
+    "status": "approved",
+    "processed_by": 1,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+}
+```
+
+### Get Return
+- **Route**: `GET /returns/{id}`
+- **Access**: Private (admin, manager)
+- **Description**: Get details of a specific return
+
+**Response**:
+```json
+{
+    "id": 1,
+    "order_item_id": 1,
+    "quantity_returned": 2,
+    "reason": "Defective product",
+    "status": "requested",
+    "processed_by": 1,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z",
+    "processed_by_username": "john.doe",
+    "product_name": "Product Name",
+    "product_sku": "PROD-123",
+    "ordered_quantity": 5
+}
+```
+
+### List Returns
+- **Route**: `GET /returns`
+- **Access**: Private (admin, manager)
+- **Description**: List all returns with optional filters
+
+**Query Parameters**:
+```json
+{
+    "status": "requested",     // Optional: Filter by status
+    "date_from": "2025-01-01", // Optional: Filter from date
+    "date_to": "2025-12-31",   // Optional: Filter to date
+    "limit": 10               // Optional: Limit number of results
+}
+```
+
+**Response**:
+```json
+[
+    {
+        "id": 1,
+        "order_item_id": 1,
+        "quantity_returned": 2,
+        "reason": "Defective product",
+        "status": "requested",
+        "processed_by": 1,
+        "created_at": "2025-01-01T00:00:00.000Z",
+        "updated_at": "2025-01-01T00:00:00.000Z",
+        "processed_by_username": "john.doe",
+        "product_name": "Product Name",
+        "product_sku": "PROD-123",
+        "ordered_quantity": 5
+    },
+    // ... more returns
+]
+```
+
+### Get Returns by Product
+- **Route**: `GET /products/{id}/returns`
+- **Access**: Private (admin, manager)
+- **Description**: Get all returns for a specific product
+
+**Query Parameters**: Same as List Returns
+
+**Response**: Same format as List Returns
+
+### Get Returns Statistics
+- **Route**: `GET /returns/statistics`
+- **Access**: Private (admin only)
+- **Description**: Get returns statistics with optional filters
+
+**Query Parameters**:
+```json
+{
+    "date_from": "2025-01-01", // Optional: From date
+    "date_to": "2025-12-31"    // Optional: To date
+}
+```
+
+**Response**:
+```json
+{
+    "total_returns": 50,
+    "approved_returns": 40,
+    "rejected_returns": 5,
+    "pending_returns": 5,
+    "total_items_returned": 75,
+    "avg_return_quantity": 1.5
+}
+```
 
 ## Categories
 
