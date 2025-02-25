@@ -1,4 +1,4 @@
-# Inventory Management API
+# Manage My Stocks : An Inventory Management API
 
 ## Overview
 

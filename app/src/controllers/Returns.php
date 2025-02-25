@@ -88,8 +88,8 @@ class Returns extends Controller {
     public function getStatistics() {
         try {
             $filters = [
-                'date_from' => $this->query['date_from'] ?? null,
-                'date_to' => $this->query['date_to'] ?? null
+                'date_from' => $_GET['date_from'] ?? null,
+                'date_to' => $_GET['date_to'] ?? null
             ];
             return $this->return->getStatistics(array_filter($filters));
         } catch (HttpException $e) {
