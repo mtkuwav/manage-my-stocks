@@ -818,13 +818,13 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 **Request**:
 ```json
 {
-    "status": "in_transit"
+    "status": "delivered"
 }
 ```
 
 **Available Statuses**:
 - `pending`: Delivery is being prepared
-- `in_transit`: Delivery is on its way
+- `shipped`: Delivery is on its way
 - `delivered`: Delivery has been completed
 - `failed`: Delivery attempt failed
 
