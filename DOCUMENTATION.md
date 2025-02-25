@@ -625,7 +625,6 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 **Request**:
 ```json
 {
-    "user_id": 1,
     "items": [
         {
             "product_id": 1,
