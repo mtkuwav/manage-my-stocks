@@ -87,9 +87,9 @@ class Category extends Controller {
     public function getAll() {
         try {
             $filters = [
-                'date_from' => $this->query['date_from'] ?? null,
-                'date_to' => $this->query['date_to'] ?? null,
-                'limit' => $this->query['limit'] ?? null
+                'date_from' => $_GET['date_from'] ?? null,
+                'date_to' => $_GET['date_to'] ?? null,
+                'limit' => isset($_GET['limit']) ? (int)$_GET['limit'] : null
             ];
     
             return $this->category->getAll(array_filter($filters));

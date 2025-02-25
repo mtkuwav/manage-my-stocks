@@ -57,9 +57,10 @@ class User extends Controller {
     public function getUsers() {
         try {
             $filters = [
-                'date_from' => $this->query['date_from'] ?? null,
-                'date_to' => $this->query['date_to'] ?? null,
-                'limit' => $this->query['limit'] ?? null
+                'role' => $_GET['role'] ?? null,
+                'date_from' => $_GET['date_from'] ?? null,
+                'date_to' => $_GET['date_to'] ?? null,
+                'limit' => isset($_GET['limit']) ? (int)$_GET['limit'] : null
             ];
             
             return $this->user->getAll(array_filter($filters));

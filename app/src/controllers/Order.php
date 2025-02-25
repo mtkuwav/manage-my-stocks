@@ -84,10 +84,11 @@ class Order extends Controller {
     public function getOrderStatistics() {
         try {
             $filters = [
-                'status' => $this->query['status'] ?? null,
-                'user_id' => $this->query['user_id'] ?? null,
-                'date_from' => $this->query['date_from'] ?? null,
-                'date_to' => $this->query['date_to'] ?? null
+                'status' => $_GET['status'] ?? null,
+                'user_id' => $_GET['user_id'] ?? null,
+                'date_from' => $_GET['date_from'] ?? null,
+                'date_to' => $_GET['date_to'] ?? null,
+                'limit' => isset($_GET['limit']) ? (int)$_GET['limit'] : null
             ];
 
             return $this->order->getStatistics(array_filter($filters));
@@ -124,11 +125,11 @@ class Order extends Controller {
     public function getAllOrders() {
         try {
             $filters = [
-                'status' => $this->query['status'] ?? null,
-                'user_id' => $this->query['user_id'] ?? null,
-                'date_from' => $this->query['date_from'] ?? null,
-                'date_to' => $this->query['date_to'] ?? null,
-                'limit' => isset($this->query['limit']) ?? null
+                'status' => $_GET['status'] ?? null,
+                'user_id' => $_GET['user_id'] ?? null,
+                'date_from' => $_GET['date_from'] ?? null,
+                'date_to' => $_GET['date_to'] ?? null,
+                'limit' => isset($_GET['limit']) ? (int)$_GET['limit'] : null
             ];
 
             if (isset($filters['limit'])) {

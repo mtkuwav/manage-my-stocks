@@ -69,12 +69,12 @@ class Product extends Controller {
     public function getAll() {
         try {
             $filters = [
-                'date_from' => $this->query['date_from'] ?? null,
-                'date_to' => $this->query['date_to'] ?? null,
-                'limit' => $this->query['limit'] ?? null,
-                'category_id' => $this->query['category_id'] ?? null,
-                'price_min' => $this->query['price_min'] ?? null,
-                'price_max' => $this->query['price_max'] ?? null
+                'date_from' => $_GET['date_from'] ?? null,
+                'date_to' => $_GET['date_to'] ?? null,
+                'limit' => isset($_GET['limit']) ? (int)$_GET['limit'] : null,
+                'category_id' => $_GET['category_id'] ?? null,
+                'price_min' => $_GET['price_min'] ?? null,
+                'price_max' => $_GET['price_max'] ?? null
             ];
             return $this->product->getAll(array_filter($filters));
         } catch (HttpException $e) {

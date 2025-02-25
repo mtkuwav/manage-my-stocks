@@ -23,6 +23,13 @@ trait FilterableTrait {
         $mainPrefix = $tableAlias ? "$tableAlias." : '';
         $joinPrefix = $joinAlias ? "$joinAlias." : '';
 
+        // Role filter
+        if (isset($filters['role'])) {
+            $prefix = $joinAlias ? $joinPrefix : $mainPrefix;
+            $conditions[] = "{$mainPrefix}role = :role";
+            $params['role'] = $filters['role'];
+        }
+
         // Product ID filter (using join table alias if provided)
         if (isset($filters['product_id'])) {
             $prefix = $joinAlias ? $joinPrefix : $mainPrefix;

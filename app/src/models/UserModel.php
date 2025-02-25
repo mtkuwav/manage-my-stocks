@@ -52,14 +52,14 @@ class UserModel extends SqlConnect {
      */
     public function getAll(?array $filters = null) {
         try {
-            $query = "SELECT * FROM {$this->userTable} u";
+            $query = "SELECT u.* FROM {$this->userTable} u";
             
             $filterData = $this->buildFilterConditions($filters, 'u');
             
             if (!empty($filterData['conditions'])) {
                 $query .= " WHERE " . implode(" AND ", $filterData['conditions']);
             }
-            
+
             $query .= " ORDER BY u.created_at DESC" . $filterData['limit'];
             
             $stmt = $this->db->prepare($query);

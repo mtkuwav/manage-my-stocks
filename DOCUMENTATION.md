@@ -27,7 +27,7 @@
 4. [Orders](#orders)
    - [Create Order](#create-order)
    - [Get Order](#get-order)
-   - [Get All Orders](#get-all-orders)
+   - [List Orders](#get-all-orders)
    - [Get Order Statistics](#get-order-statistics)
    - [Update Order Status](#update-order-status)
    - [Cancel Order](#cancel-order)
@@ -686,7 +686,7 @@ The API uses a JWT (JSON Web Token) based authentication system with refresh tok
 
 **Response**: Same as create order response
 
-### Get All Orders
+### List Orders
 - **Route**: `GET /orders`
 - **Access**: Private (admin, manager)
 - **Description**: Get all orders with optional filters

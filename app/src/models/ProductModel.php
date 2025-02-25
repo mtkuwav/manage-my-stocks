@@ -186,7 +186,7 @@ class ProductModel extends SqlConnect {
      */
     public function getAll(?array $filters = null) {
         try {
-            $query = "SELECT * FROM {$this->tableProducts} p";
+            $query = "SELECT p.* FROM {$this->tableProducts} p";
             
             $filterData = $this->buildFilterConditions($filters, 'p');
             
@@ -194,7 +194,7 @@ class ProductModel extends SqlConnect {
                 $query .= " WHERE " . implode(" AND ", $filterData['conditions']);
             }
             
-            $query .= " ORDER BY p.created_at DESC";
+            $query .= " ORDER BY p.created_at DESC" . $filterData['limit'];
             
             $stmt = $this->db->prepare($query);
             $stmt->execute($filterData['params']);
